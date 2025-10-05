@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, GlobeAltIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon } from './icons';
 import { User, UserRole, Notification } from '../types';
 
 interface SidebarProps {
@@ -22,7 +22,6 @@ const navConfig = {
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
-    { id: 'website-structure', label: 'Website Structure', icon: <GlobeAltIcon /> },
   ],
   [UserRole.SUB_ADMIN]: [
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },

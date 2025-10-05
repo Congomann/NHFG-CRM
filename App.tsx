@@ -21,7 +21,6 @@ import BroadcastModal from './components/BroadcastModal';
 import DemoModeSwitcher from './components/DemoModeSwitcher';
 import PublicLayout from './components/PublicLayout';
 import HomePage from './components/HomePage';
-import WebsiteStructureView from './components/WebsiteStructureView';
 
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
@@ -366,16 +365,11 @@ const App: React.FC = () => {
             }
         }
         break;
-      case 'website-structure':
-        if (displayUser.role === UserRole.ADMIN) {
-            return <WebsiteStructureView />;
-        }
-        break;
       case 'dashboard':
       default:
         // If the default route is hit and it's not 'dashboard', it might be an old link.
         // Redirect to homepage if it's not a known CRM view.
-        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile', 'website-structure'];
+        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile'];
         if (!knownCrmViews.some(v => currentView.startsWith(v))) {
              return (
                 <PublicLayout onNavigate={handleNavigation}>
