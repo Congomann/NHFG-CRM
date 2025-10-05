@@ -14,6 +14,27 @@ let notifications: Notification[] = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS
 let calendarNotes: CalendarNote[] = JSON.parse(JSON.stringify(MOCK_CALENDAR_NOTES));
 let testimonials: Testimonial[] = JSON.parse(JSON.stringify(MOCK_TESTIMONIALS));
 
+// --- ID Generation ---
+// To handle concurrent data growth, we'll manage a single sequence for IDs.
+// This is more performant than scanning arrays on every creation.
+let nextId = Math.max(
+    0,
+    ...users.map(u => u.id),
+    ...agents.map(a => a.id),
+    ...clients.map(c => c.id),
+    ...policies.map(p => p.id),
+    ...interactions.map(i => i.id),
+    ...tasks.map(t => t.id),
+    ...messages.map(m => m.id),
+    ...licenses.map(l => l.id),
+    ...notifications.map(n => n.id),
+    ...calendarNotes.map(c => c.id),
+    ...testimonials.map(t => t.id)
+) + 1;
+
+const getNextId = () => nextId++;
+
+
 // --- User and Agent Management ---
 export const db = {
   users: {
@@ -21,8 +42,7 @@ export const db = {
     findByEmail: (email: string) => users.find(u => u.email.toLowerCase() === email.toLowerCase()),
     findById: (id: number) => users.find(u => u.id === id),
     create: (data: Omit<User, 'id'>) => {
-      const allIds = [...users.map(u => u.id), ...agents.map(a => a.id)];
-      const newId = Math.max(0, ...allIds) + 1;
+      const newId = getNextId();
       const newUser: User = { ...data, id: newId };
       users.push(newUser);
       return newUser;
@@ -76,7 +96,7 @@ export const db = {
       find: () => clients,
       findById: (id: number) => clients.find(c => c.id === id),
       create: (data: Omit<Client, 'id'>) => {
-          const newId = Math.max(0, ...clients.map(c => c.id)) + 1;
+          const newId = getNextId();
           const newClient = { ...data, id: newId };
           clients.push(newClient);
           return newClient;
@@ -113,10 +133,7 @@ export const db = {
       }
   },
   createRecord: <T extends {id: number}>(resource: string, data: Omit<T, 'id'>): T => {
-      // FIX: Changed type assertion from `as T[]` to the safer `as { id: number }[]`
-      // to resolve the TypeScript error. This ensures type safety as we only need the `id` property here.
-      const table = db.getAll(resource) as { id: number }[];
-      const newId = Math.max(0, ...table.map(r => r.id)) + 1;
+      const newId = getNextId();
       const newRecord = { ...data, id: newId } as T;
       
       switch(resource) {
