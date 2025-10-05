@@ -48,9 +48,9 @@ const AgentPerformanceDetail: React.FC<AgentPerformanceDetailProps> = ({ agent, 
 
     return Object.entries(data)
         .map(([name, value]) => ({ name, Commission: value }))
-        // FIX: The type inference for `b.Commission` and `a.Commission` might be failing.
-        // Adding a fallback to 0 ensures that both operands are always numbers, satisfying TypeScript.
-        .sort((a, b) => (b.Commission || 0) - (a.Commission || 0));
+        // FIX: The type inference for `b.Commission` and `a.Commission` is correct.
+        // A direct subtraction is sufficient and cleaner for sorting.
+        .sort((a, b) => b.Commission - a.Commission);
   }, [agent, agentPolicies]);
 
   const hasData = agentPolicies.length > 0;

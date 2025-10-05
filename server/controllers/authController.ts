@@ -2,8 +2,8 @@ import { db } from '../db';
 import * as auth from '../auth';
 import { User, UserRole, Agent, AgentStatus } from '../../types';
 
-export const login = ({ email, password }: Record<string, string>) => {
-  const user = db.users.findByEmail(email);
+export const login = async ({ email, password }: Record<string, string>) => {
+  const user = await db.users.findByEmail(email);
 
   const isMockUserLogin = user && user.password === undefined && password === 'password123';
   const isRegisteredUserLogin = user && user.password !== undefined && user.password === password;
@@ -23,14 +23,14 @@ export const login = ({ email, password }: Record<string, string>) => {
   throw { status: 401, message: 'Invalid email or password.' };
 };
 
-export const register = (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
-    if (db.users.findByEmail(userData.email)) {
+export const register = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
+    if (await db.users.findByEmail(userData.email)) {
         throw { status: 409, message: 'An account with this email already exists.' };
     }
 
     const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    const newUser = db.users.create({
+    const newUser = await db.users.create({
       ...userData,
       title: userData.role === UserRole.AGENT ? 'Agent Applicant' : 'Sub-Admin Applicant',
       avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
@@ -39,7 +39,7 @@ export const register = (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
     });
 
     if (newUser) {
-        db.agents.create({
+        await db.agents.create({
             id: newUser!.id,
             name: newUser!.name,
             email: newUser!.email,
@@ -55,10 +55,10 @@ export const register = (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
     return { user: userResponse };
 };
 
-export const verifyEmail = ({ userId, code }: { userId: number, code: string }) => {
-    const user = db.users.findById(userId);
+export const verifyEmail = async ({ userId, code }: { userId: number, code: string }) => {
+    const user = await db.users.findById(userId);
     if (user && user.verificationCode === code) {
-        db.users.update(userId, { isVerified: true, verificationCode: undefined });
+        await db.users.update(userId, { isVerified: true, verificationCode: undefined });
         return { success: true };
     }
     throw { status: 400, message: 'Invalid verification code.' };

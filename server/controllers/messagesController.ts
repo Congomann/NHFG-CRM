@@ -1,8 +1,8 @@
 import { db } from '../db';
 import { User, UserRole, Message, AgentStatus } from '../../types';
 
-export const sendMessage = (currentUser: User, { receiverId, text }: { receiverId: number, text: string }) => {
-    const newMessage = db.createRecord('messages', {
+export const sendMessage = async (currentUser: User, { receiverId, text }: { receiverId: number, text: string }) => {
+    const newMessage = await db.createRecord('messages', {
         senderId: currentUser.id,
         receiverId,
         text,
@@ -13,7 +13,7 @@ export const sendMessage = (currentUser: User, { receiverId, text }: { receiverI
     });
 
     // Create a notification for the receiver
-    db.createRecord('notifications', {
+    await db.createRecord('notifications', {
         userId: receiverId,
         message: `You have a new message from ${currentUser.name}.`,
         timestamp: new Date().toISOString(),
@@ -24,8 +24,9 @@ export const sendMessage = (currentUser: User, { receiverId, text }: { receiverI
     return newMessage;
 };
 
-export const editMessage = (currentUser: User, messageId: number, { text }: { text: string }) => {
-    const message = (db.getAll('messages') as Message[]).find(m => m.id === messageId);
+export const editMessage = async (currentUser: User, messageId: number, { text }: { text: string }) => {
+    const messages = await db.getAll('messages') as Message[];
+    const message = messages.find(m => m.id === messageId);
     if (!message) throw { status: 404, message: 'Message not found.' };
     if (message.senderId !== currentUser.id) throw { status: 403, message: 'You can only edit your own messages.' };
 
@@ -36,11 +37,12 @@ export const editMessage = (currentUser: User, messageId: number, { text }: { te
     }
 
     // FIX: Explicitly provide the generic type to ensure type safety.
-    return db.updateRecord<Message>('messages', messageId, { text, edited: true });
+    return await db.updateRecord<Message>('messages', messageId, { text, edited: true });
 };
 
-export const trashMessage = (currentUser: User, messageId: number) => {
-    const message = (db.getAll('messages') as Message[]).find(m => m.id === messageId);
+export const trashMessage = async (currentUser: User, messageId: number) => {
+    const messages = await db.getAll('messages') as Message[];
+    const message = messages.find(m => m.id === messageId);
     if (!message) throw { status: 404, message: 'Message not found.' };
 
     const isSender = message.senderId === currentUser.id;
@@ -58,7 +60,7 @@ export const trashMessage = (currentUser: User, messageId: number) => {
 
     // "Unsend" logic: If the sender deletes a recent message, it's deleted for everyone.
     if (isSender && isRecent) {
-        const success = db.deleteRecord('messages', messageId);
+        const success = await db.deleteRecord('messages', messageId);
         if (!success) {
             throw { status: 500, message: 'Failed to delete message.' };
         }
@@ -66,15 +68,16 @@ export const trashMessage = (currentUser: User, messageId: number) => {
     }
 
     // "Delete for me" logic for all other cases (receiver deletes, sender deletes old message, admin deletes)
-    return db.updateRecord<Message>('messages', messageId, { 
+    return await db.updateRecord<Message>('messages', messageId, { 
         status: 'trashed', 
         deletedTimestamp: new Date().toISOString(),
         deletedBy: currentUser.id 
     });
 };
 
-export const restoreMessage = (currentUser: User, messageId: number) => {
-    const message = (db.getAll('messages') as Message[]).find(m => m.id === messageId);
+export const restoreMessage = async (currentUser: User, messageId: number) => {
+    const messages = await db.getAll('messages') as Message[];
+    const message = messages.find(m => m.id === messageId);
     if (!message) throw { status: 404, message: 'Message not found.' };
 
     if (message.deletedBy !== currentUser.id && currentUser.role !== UserRole.ADMIN) {
@@ -82,40 +85,43 @@ export const restoreMessage = (currentUser: User, messageId: number) => {
     }
 
     // FIX: Explicitly provide the generic type to ensure type safety.
-    return db.updateRecord<Message>('messages', messageId, { 
+    return await db.updateRecord<Message>('messages', messageId, { 
         status: 'active', 
         deletedTimestamp: undefined, 
         deletedBy: undefined 
     });
 };
 
-export const permanentlyDeleteMessage = (currentUser: User, messageId: number) => {
+export const permanentlyDeleteMessage = async (currentUser: User, messageId: number) => {
     if (currentUser.role !== UserRole.ADMIN) {
         throw { status: 403, message: 'Only administrators can permanently delete messages.' };
     }
-    const success = db.deleteRecord('messages', messageId);
+    const success = await db.deleteRecord('messages', messageId);
     if (!success) {
         throw { status: 404, message: 'Message not found for permanent deletion.' };
     }
     return { success };
 };
 
-export const broadcastMessage = (adminUser: User, { text }: { text: string }) => {
+export const broadcastMessage = async (adminUser: User, { text }: { text: string }) => {
     if (adminUser.role !== UserRole.ADMIN) {
         throw { status: 403, message: 'Only administrators can broadcast messages.' };
     }
 
-    const activeUsers = db.users.find().filter(
+    const allUsers = await db.users.find();
+    const allAgents = await db.agents.find();
+
+    const activeUsers = allUsers.filter(
         u => u.id !== adminUser.id && (u.role === UserRole.AGENT || u.role === UserRole.SUB_ADMIN)
     );
-    const activeAgentIds = new Set(db.agents.find().filter(a => a.status === AgentStatus.ACTIVE).map(a => a.id));
+    const activeAgentIds = new Set(allAgents.filter(a => a.status === AgentStatus.ACTIVE).map(a => a.id));
 
     const recipients = activeUsers.filter(u => activeAgentIds.has(u.id));
 
     const createdMessages: Message[] = [];
 
-    recipients.forEach(recipient => {
-        const newMessage = db.createRecord('messages', {
+    for (const recipient of recipients) {
+        const newMessage = await db.createRecord('messages', {
             senderId: adminUser.id,
             receiverId: recipient.id,
             text: text,
@@ -125,7 +131,7 @@ export const broadcastMessage = (adminUser: User, { text }: { text: string }) =>
             isRead: false,
         });
 
-        db.createRecord('notifications', {
+        await db.createRecord('notifications', {
             userId: recipient.id,
             message: `New broadcast message from ${adminUser.name}.`,
             timestamp: new Date().toISOString(),
@@ -134,25 +140,25 @@ export const broadcastMessage = (adminUser: User, { text }: { text: string }) =>
         });
 
         createdMessages.push(newMessage as any);
-    });
+    }
 
     return { success: true, count: createdMessages.length };
 };
 
-export const markConversationAsRead = (currentUser: User, { senderId }: { senderId: number }) => {
-    const allMessages = db.getAll('messages') as Message[];
+export const markConversationAsRead = async (currentUser: User, { senderId }: { senderId: number }) => {
+    const allMessages = await db.getAll('messages') as Message[];
     let updatedCount = 0;
     
-    allMessages.forEach(message => {
+    for (const message of allMessages) {
         if (
             message.receiverId === currentUser.id &&
             message.senderId === senderId &&
             !message.isRead
         ) {
-            db.updateRecord<Message>('messages', message.id, { isRead: true });
+            await db.updateRecord<Message>('messages', message.id, { isRead: true });
             updatedCount++;
         }
-    });
+    }
 
     return { success: true, updatedCount };
 };

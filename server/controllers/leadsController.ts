@@ -1,9 +1,9 @@
 import { db } from '../db';
 import { ClientStatus, InteractionType } from '../../types';
 
-export const createFromProfile = ({ leadData, agentId }: { leadData: any, agentId: number }) => {
+export const createFromProfile = async ({ leadData, agentId }: { leadData: any, agentId: number }) => {
     // 1. Create the new client record with 'Lead' status
-    const newClient = db.clients.create({
+    const newClient = await db.clients.create({
         ...leadData,
         status: ClientStatus.LEAD,
         joinDate: new Date().toISOString().split('T')[0],
@@ -11,7 +11,7 @@ export const createFromProfile = ({ leadData, agentId }: { leadData: any, agentI
     });
 
     // 2. Create an internal message from the client to the agent
-    db.createRecord('messages', {
+    await db.createRecord('messages', {
         // In a real system, you'd have a 'system' user or handle this differently,
         // but for now, we'll simulate it as if the client sent it.
         // A real implementation would need a user record for the lead, which is out of scope here.
@@ -24,7 +24,7 @@ export const createFromProfile = ({ leadData, agentId }: { leadData: any, agentI
     });
 
     // 3. Create a notification for the agent
-    db.createRecord('notifications', {
+    await db.createRecord('notifications', {
         userId: agentId,
         message: `You have a new lead: ${leadData.firstName} ${leadData.lastName}.`,
         timestamp: new Date().toISOString(),
