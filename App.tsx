@@ -15,19 +15,20 @@ import AddEditAgentModal from './components/AddEditAgentModal';
 import EditMyProfileModal from './components/EditMyProfileModal';
 import AddEditPolicyModal from './components/AddEditPolicyModal';
 import LicensesView from './components/LicensesView';
-import Login from './components/Login';
-import Register from './components/Register';
-import VerifyEmail from './components/VerifyEmail';
-import PendingApproval from './components/PendingApproval';
 import CalendarView from './components/CalendarView';
 import TestimonialsManagement from './components/TestimonialsManagement';
 import BroadcastModal from './components/BroadcastModal';
+import DemoModeSwitcher from './components/DemoModeSwitcher';
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { MOCK_USERS } from './constants';
 import * as apiClient from './services/apiClient';
 
-type AuthView = 'login' | 'register' | 'verifyEmail';
+const defaultUser = MOCK_USERS.find(u => u.role === UserRole.ADMIN)!;
+// This is the pre-generated token for the admin user (ID 1), as the login flow is disabled.
+const DEMO_TOKEN = 'eyJpZCI6MSwicm9sZSI6IkFkbWluIn0=.U1VQRVJfU0VDUkVUX0tFWV9GT1JfREVNTw==';
+apiClient.setToken(DEMO_TOKEN);
 
 const NotificationHandler: React.FC<{ notifications: Notification[]; currentUser: User | null }> = ({ notifications, currentUser }) => {
   const { addToast } = useToast();
@@ -52,13 +53,7 @@ const NotificationHandler: React.FC<{ notifications: Notification[]; currentUser
 
 
 const App: React.FC = () => {
-  const { addToast } = useToast();
-
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authView, setAuthView] = useState<AuthView>('login');
-  const [userForVerification, setUserForVerification] = useState<User | null>(null);
+  const currentUser = defaultUser;
   
   const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(currentUser);
 
@@ -76,17 +71,7 @@ const App: React.FC = () => {
   const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
   const [clientListAgentFilter, setClientListAgentFilter] = useState<Agent | null>(null);
   const [highlightedAgentId, setHighlightedAgentId] = useState<number | null>(null);
-
-  useEffect(() => {
-    // Check for existing token on initial load
-    const token = localStorage.getItem('authToken');
-    const userJson = localStorage.getItem('currentUser');
-    if (token && userJson) {
-      apiClient.setToken(token);
-      setCurrentUser(JSON.parse(userJson));
-    }
-    setIsAuthLoading(false);
-  }, []);
+  const [impersonatedRole, setImpersonatedRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'dashboard';
@@ -107,58 +92,6 @@ const App: React.FC = () => {
 
   const handleNavigation = (view: string) => {
     window.location.hash = `/${view}`;
-  };
-
-  const handleLogin = async (email: string, password: string): Promise<boolean> => {
-    setAuthError(null);
-    try {
-        const { user, token } = await apiClient.login(email, password);
-        apiClient.setToken(token);
-        setCurrentUser(user);
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        handleNavigation('dashboard');
-        addToast('Login Successful', `Welcome back, ${user.name}!`, 'success');
-        return true;
-    } catch (error: any) {
-        if (error.requiresVerification) {
-            setAuthError(error.message);
-            setUserForVerification(error.user);
-            setAuthView('verifyEmail');
-        } else {
-            setAuthError(error.message);
-        }
-        return false;
-    }
-  };
-
-  const handleLogout = () => {
-    apiClient.logout();
-    setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    setAuthView('login');
-    window.location.hash = '';
-  };
-  
-  const handleRegister = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
-      try {
-        const { user } = await apiClient.register(userData);
-        setUserForVerification(user);
-        setAuthView('verifyEmail');
-        addToast('Account Created', 'Please check your "email" for a verification code.', 'success');
-      } catch (error: any) {
-         addToast('Registration Failed', error.message || 'An error occurred.', 'error');
-      }
-  };
-
-  const handleVerify = async (userId: number, code: string) => {
-      try {
-        await apiClient.verifyEmail(userId, code);
-        addToast('Success!', 'Email verified successfully! Please log in.', 'success');
-        setUserForVerification(null);
-        setAuthView('login');
-      } catch (error: any) {
-        addToast('Verification Failed', error.message || 'The verification code is invalid.', 'error');
-      }
   };
 
   const handleNotificationClick = (notification: Notification) => {
@@ -214,10 +147,6 @@ const App: React.FC = () => {
   
   const handleUpdateMyProfile = async (updatedUser: User) => {
       await handlers.handleUpdateMyProfile(updatedUser);
-      // The user object in state needs to be updated after a successful API call.
-      // The useDatabase hook refetches, but the currentUser state is local to App.tsx.
-      const freshUser = await apiClient.get<User>('/api/users/me'); // A hypothetical endpoint to get self
-      setCurrentUser(freshUser);
       setIsMyProfileModalOpen(false);
   };
   
@@ -253,9 +182,7 @@ const App: React.FC = () => {
     setIsBroadcastModalOpen(false);
   };
 
-  const renderContent = () => {
-    if (!currentUser) return null;
-
+  const renderContent = (displayUser: User) => {
     if (currentView.startsWith('client/')) {
       const clientId = parseInt(currentView.split('/')[1], 10);
       const client = clients.find(c => c.id === clientId);
@@ -265,8 +192,8 @@ const App: React.FC = () => {
                     policies={policies.filter(p => p.clientId === clientId)} 
                     interactions={interactions.filter(i => i.clientId === clientId)} 
                     assignedAgent={agents.find(a => a.id === client.agentId)}
-                    onBack={() => handleNavigation(currentUser.role === UserRole.SUB_ADMIN ? 'leads' : 'clients')}
-                    currentUser={currentUser}
+                    onBack={() => handleNavigation(displayUser.role === UserRole.SUB_ADMIN ? 'leads' : 'clients')}
+                    currentUser={displayUser}
                     onUpdateStatus={handlers.handleUpdateClientStatus}
                     onOpenAddPolicyModal={() => handleOpenAddPolicyModal(client.id)}
                     onOpenEditPolicyModal={handleOpenEditPolicyModal}
@@ -313,9 +240,9 @@ const App: React.FC = () => {
 
     switch (currentView) {
       case 'clients':
-        if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.AGENT) {
+        if (displayUser.role === UserRole.ADMIN || displayUser.role === UserRole.AGENT) {
             return <ClientList 
-                        title={clientListAgentFilter ? `${clientListAgentFilter.name}'s Clients` : (currentUser.role === UserRole.ADMIN ? 'All Clients' : 'My Clients')}
+                        title={clientListAgentFilter ? `${clientListAgentFilter.name}'s Clients` : (displayUser.role === UserRole.ADMIN ? 'All Clients' : 'My Clients')}
                         clients={clientListAgentFilter ? clients.filter(c => c.agentId === clientListAgentFilter.id) : clients}
                         onSelectClient={(id) => handleNavigation(`client/${id}`)}
                         onAddClient={() => setIsClientModalOpen(true)}
@@ -325,7 +252,7 @@ const App: React.FC = () => {
         }
         break;
       case 'tasks':
-        if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.AGENT) {
+        if (displayUser.role === UserRole.ADMIN || displayUser.role === UserRole.AGENT) {
             return <TasksView 
                         tasks={tasks}
                         clients={clients}
@@ -337,7 +264,7 @@ const App: React.FC = () => {
         }
         break;
       case 'agents':
-        if (currentUser.role === UserRole.ADMIN) {
+        if (displayUser.role === UserRole.ADMIN) {
             return <AgentManagement 
                         agents={agents} 
                         users={users}
@@ -354,7 +281,7 @@ const App: React.FC = () => {
         }
         break;
       case 'leads':
-        if (currentUser.role === UserRole.SUB_ADMIN) {
+        if (displayUser.role === UserRole.SUB_ADMIN) {
             return <LeadDistribution 
                         leads={clients.filter(c => c.status === ClientStatus.LEAD)} 
                         onSelectLead={(id) => handleNavigation(`client/${id}`)}
@@ -372,9 +299,9 @@ const App: React.FC = () => {
             onDeleteNote={handlers.handleDeleteCalendarNote}
         />;
       case 'commissions':
-        if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.AGENT) {
+        if (displayUser.role === UserRole.ADMIN || displayUser.role === UserRole.AGENT) {
             return <CommissionsView
-                        currentUser={currentUser}
+                        currentUser={displayUser}
                         agents={agents}
                         policies={policies}
                         clients={clients}
@@ -383,8 +310,8 @@ const App: React.FC = () => {
         }
         break;
        case 'licenses':
-        if (currentUser.role === UserRole.AGENT) {
-            const agent = agents.find(a => a.id === currentUser.id);
+        if (displayUser.role === UserRole.AGENT) {
+            const agent = agents.find(a => a.id === displayUser.id);
             if (agent) {
                 return <LicensesView
                     agent={agent}
@@ -396,9 +323,9 @@ const App: React.FC = () => {
         }
         break;
       case 'testimonials':
-        if (currentUser.role === UserRole.AGENT) {
+        if (displayUser.role === UserRole.AGENT) {
             return <TestimonialsManagement
-                testimonials={testimonials.filter(t => t.agentId === currentUser.id)}
+                testimonials={testimonials.filter(t => t.agentId === displayUser.id)}
                 onUpdateTestimonialStatus={handlers.handleUpdateTestimonialStatus}
                 onDeleteTestimonial={handlers.handleDeleteTestimonial}
                 onNavigate={handleNavigation}
@@ -406,13 +333,13 @@ const App: React.FC = () => {
         }
         break;
       case 'my-profile':
-        if (currentUser.role === UserRole.AGENT) {
-            const agent = agents.find(a => a.id === currentUser.id);
+        if (displayUser.role === UserRole.AGENT) {
+            const agent = agents.find(a => a.id === displayUser.id);
             if (agent) {
                 return <AgentProfile 
                     agent={agent} 
                     onAddLead={(leadData) => handleAddLeadFromProfile(leadData, agent.id)}
-                    currentUser={currentUser}
+                    currentUser={displayUser}
                     onMessageAgent={handleMessageAgent}
                     onViewAgentClients={handleViewAgentClients}
                     onUpdateProfile={() => {}}
@@ -429,7 +356,7 @@ const App: React.FC = () => {
       case 'dashboard':
       default:
         return <Dashboard 
-                user={currentUser}
+                user={displayUser}
                 clients={clients}
                 policies={policies}
                 tasks={tasks}
@@ -440,7 +367,7 @@ const App: React.FC = () => {
   };
   
   const AppContent = () => {
-      if (isAuthLoading || (currentUser && isDataLoading)) {
+      if (isDataLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
                 <div className="text-xl font-semibold text-slate-600">Loading CRM...</div>
@@ -448,22 +375,17 @@ const App: React.FC = () => {
         );
       }
       
-      if (!currentUser) {
-        switch(authView) {
-            case 'register':
-                return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthView('login')} />;
-            case 'verifyEmail':
-                return <VerifyEmail user={userForVerification} onVerify={handleVerify} onNavigateToLogin={() => setAuthView('login')} />;
-            case 'login':
-            default:
-                return <Login onLogin={handleLogin} error={authError} onNavigateToRegister={() => setAuthView('register')} />;
-        }
+      const DEMO_AGENT_USER = users.find(u => u.email === 'kara.t@newhollandfinancial.com');
+      const DEMO_SUB_ADMIN_USER = users.find(u => u.email === 'subadmin@newhollandfinancial.com');
+
+      let displayUser = currentUser;
+      if (impersonatedRole === UserRole.AGENT && DEMO_AGENT_USER) {
+          displayUser = DEMO_AGENT_USER;
+      } else if (impersonatedRole === UserRole.SUB_ADMIN && DEMO_SUB_ADMIN_USER) {
+          displayUser = DEMO_SUB_ADMIN_USER;
       }
-    
-      const agentProfile = agents.find(a => a.id === currentUser.id);
-      if (currentUser.role !== UserRole.ADMIN && agentProfile?.status === AgentStatus.PENDING) {
-          return <PendingApproval onLogout={handleLogout} />;
-      }
+
+      const effectiveRole = impersonatedRole || currentUser.role;
 
       return (
         <div className="flex h-screen bg-background font-sans">
@@ -472,14 +394,20 @@ const App: React.FC = () => {
             currentView={currentView} 
             onNavigate={handleNavigation}
             onEditMyProfile={() => setIsMyProfileModalOpen(true)}
-            onLogout={handleLogout}
             notifications={notifications}
             onNotificationClick={handleNotificationClick}
             onClearAllNotifications={() => {}}
+            impersonatedRole={impersonatedRole}
             />}
-          <main className={`flex-1 overflow-y-auto ${!isAgentProfileView ? 'ml-64' : ''}`}>
-            <div key={currentView} className="page-enter">
-                {renderContent()}
+          <main className={`flex-1 overflow-y-auto relative ${!isAgentProfileView ? 'ml-64' : ''}`}>
+            {currentUser.role === UserRole.ADMIN && !isAgentProfileView && (
+              <DemoModeSwitcher
+                activeRole={effectiveRole}
+                onSwitch={setImpersonatedRole}
+              />
+            )}
+            <div key={currentView + displayUser.role + displayUser.id} className="page-enter">
+                {renderContent(displayUser)}
             </div>
           </main>
           <AddClientModal 

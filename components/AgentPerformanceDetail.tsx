@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Agent, Client, Policy } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Agent, Client, Policy, PolicyType } from '../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ComposedChart, Line } from 'recharts';
 
 interface AgentPerformanceDetailProps {
   agent: Agent;
@@ -17,16 +17,11 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
-const AgentPerformanceDetail: React.FC<AgentPerformanceDetailProps> = ({ agent, policies, clients }) => {
+const AgentPerformanceDetail: React.FC<AgentPerformanceDetailProps> = ({ agent, policies }) => {
+  const agentPolicies = policies; 
 
-  const performanceData = useMemo(() => {
-    const agentClientIds = clients
-      .filter(c => c.agentId === agent.id)
-      .map(c => c.id);
-
-    const agentPolicies = policies.filter(p => agentClientIds.includes(p.clientId));
-
-    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+  const monthlyData = useMemo(() => {
+    const data = Array.from({ length: 12 }, (_, i) => ({
       month: new Date(0, i).toLocaleString('default', { month: 'short' }),
       policiesSold: 0,
       totalAP: 0,
@@ -35,67 +30,88 @@ const AgentPerformanceDetail: React.FC<AgentPerformanceDetailProps> = ({ agent, 
 
     agentPolicies.forEach(policy => {
       const monthIndex = new Date(policy.startDate).getMonth();
-      if (monthlyData[monthIndex]) {
-        monthlyData[monthIndex].policiesSold += 1;
-        monthlyData[monthIndex].totalAP += policy.annualPremium;
-        monthlyData[monthIndex].commissionEarned += policy.annualPremium * agent.commissionRate;
+      if (data[monthIndex]) {
+        data[monthIndex].policiesSold += 1;
+        data[monthIndex].totalAP += policy.annualPremium;
+        data[monthIndex].commissionEarned += policy.annualPremium * agent.commissionRate;
       }
     });
+    return data;
+  }, [agent, agentPolicies]);
+  
+  const commissionByType = useMemo(() => {
+    const data = agentPolicies.reduce((acc, policy) => {
+        const commission = policy.annualPremium * agent.commissionRate;
+        acc[policy.type] = (acc[policy.type] || 0) + commission;
+        return acc;
+    }, {} as Record<PolicyType, number>);
 
-    return monthlyData;
-  }, [agent, policies, clients]);
+    return Object.entries(data)
+        .map(([name, value]) => ({ name, Commission: value }))
+        // FIX: The type inference for `b.Commission` and `a.Commission` might be failing.
+        // Adding a fallback to 0 ensures that both operands are always numbers, satisfying TypeScript.
+        .sort((a, b) => (b.Commission || 0) - (a.Commission || 0));
+  }, [agent, agentPolicies]);
 
-  const hasData = performanceData.some(d => d.policiesSold > 0);
+  const hasData = agentPolicies.length > 0;
+  const COLORS = ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff'];
 
   return (
-    <div className="bg-white p-6 rounded-lg">
-      <h3 className="text-xl font-bold text-slate-800 mb-4">Monthly Performance for {agent.name}</h3>
-      {hasData ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div>
+      <h3 className="text-xl font-bold text-slate-800 mb-4">Performance Overview</h3>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center border rounded-lg p-4 mb-6 bg-slate-50">
           <div>
-            <h4 className="font-semibold text-slate-700 mb-2">Year-to-Date Summary</h4>
-            <div className="overflow-x-auto border border-slate-200 rounded-lg">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-semibold text-slate-600">Month</th>
-                    <th className="px-4 py-2 text-right font-semibold text-slate-600">Policies Sold</th>
-                    <th className="px-4 py-2 text-right font-semibold text-slate-600">Total AP</th>
-                    <th className="px-4 py-2 text-right font-semibold text-slate-600">Commission</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {performanceData.map(data => (
-                    <tr key={data.month} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-medium">{data.month}</td>
-                      <td className="px-4 py-2 text-right">{data.policiesSold}</td>
-                      <td className="px-4 py-2 text-right">{formatCurrency(data.totalAP)}</td>
-                      <td className="px-4 py-2 text-right text-emerald-600 font-medium">{formatCurrency(data.commissionEarned)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              <p className="text-3xl font-bold text-primary-600">{agent.clientCount}</p>
+              <p className="text-sm text-slate-500 font-medium">Clients</p>
           </div>
           <div>
-            <h4 className="font-semibold text-slate-700 mb-2">Performance Chart</h4>
+              <p className="text-3xl font-bold text-primary-600">{agent.leads}</p>
+              <p className="text-sm text-slate-500 font-medium">Leads</p>
+          </div>
+          <div>
+              <p className="text-3xl font-bold text-primary-600">{(agent.conversionRate * 100).toFixed(0)}%</p>
+              <p className="text-sm text-slate-500 font-medium">Conversion Rate</p>
+          </div>
+      </div>
+
+      {hasData ? (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3">
+            <h4 className="font-semibold text-slate-700 mb-2">Monthly Sales & Commissions</h4>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" orientation="left" stroke="#4f46e5" label={{ value: 'Policies Sold', angle: -90, position: 'insideLeft' }} />
-                <YAxis yAxisId="right" orientation="right" stroke="#10b981" label={{ value: 'Total AP', angle: 90, position: 'insideRight' }} tickFormatter={formatCurrency} />
-                <Tooltip formatter={(value, name) => name === 'totalAP' ? formatCurrency(Number(value)) : value} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="policiesSold" name="Policies Sold" fill="#4f46e5" />
-                <Bar yAxisId="right" dataKey="totalAP" name="Total AP" fill="#10b981" />
-              </BarChart>
+                <ComposedChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" orientation="left" stroke="#4f46e5" label={{ value: 'Policies Sold', angle: -90, position: 'insideLeft', offset: -5 }} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#10b981" label={{ value: 'Commission', angle: 90, position: 'insideRight' }} tickFormatter={formatCurrency} />
+                    <Tooltip formatter={(value: number, name: string) => [name === 'commissionEarned' ? formatCurrency(value) : value, name === 'commissionEarned' ? 'Commission Earned' : 'Policies Sold']} />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="policiesSold" name="Policies Sold" fill="#818cf8" />
+                    <Line yAxisId="right" type="monotone" dataKey="commissionEarned" name="Commission Earned" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </ComposedChart>
             </ResponsiveContainer>
+          </div>
+          <div className="lg:col-span-2">
+             <h4 className="font-semibold text-slate-700 mb-2">Commission by Policy Type</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={commissionByType} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={formatCurrency} />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }}/>
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Bar dataKey="Commission" fill="#4f46e5" barSize={20}>
+                        {commissionByType.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Bar>
+                </BarChart>
+              </ResponsiveContainer>
           </div>
         </div>
       ) : (
-        <div className="text-center py-10 text-slate-500">
-          No policy data available for this agent for the current year.
+        <div className="text-center py-10 text-slate-500 bg-slate-50 rounded-lg">
+          No policy data available to generate performance details.
         </div>
       )}
     </div>

@@ -92,6 +92,7 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
     const [editedProfile, setEditedProfile] = useState<Agent>(agent);
     const [activeTab, setActiveTab] = useState('profile');
     const [copied, setCopied] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
 
     const isAdminView = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUB_ADMIN;
     const isOwner = currentUser.id === agent.id;
@@ -100,6 +101,8 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
     
     const handleShare = async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
+        if (isSharing) return;
+
         const canonicalUrl = `${window.location.origin}${window.location.pathname}#/agent/${agent.slug}`;
         const shareData = {
             title: `${agent.name} - Insurance Advisor`,
@@ -108,6 +111,7 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
         };
 
         try {
+            setIsSharing(true);
             if (navigator.share) {
                 await navigator.share(shareData);
             } else {
@@ -128,6 +132,8 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
             } catch (copyError) {
                 alert('Could not copy link. Please copy it manually: ' + canonicalUrl);
             }
+        } finally {
+            setIsSharing(false);
         }
     };
 
@@ -193,8 +199,8 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
         setIsEditing(false);
     };
 
-    const ActionButton: React.FC<{ onClick: (e: React.MouseEvent<HTMLButtonElement>) => void; children: React.ReactNode; className: string }> = ({ onClick, children, className }) => (
-        <button onClick={onClick} className={`flex items-center justify-center text-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-md shadow-sm transition-colors ${className}`}>
+    const ActionButton: React.FC<{ onClick: (e: React.MouseEvent<HTMLButtonElement>) => void; children: React.ReactNode; className: string; disabled?: boolean }> = ({ onClick, children, className, disabled }) => (
+        <button onClick={onClick} disabled={disabled} className={`flex items-center justify-center text-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-md shadow-sm transition-colors ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {children}
         </button>
     );
@@ -228,9 +234,9 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                                     )}
                                 </>
                             )}
-                             <ActionButton onClick={handleShare} className="bg-sky-500 text-white hover:bg-sky-600">
+                             <ActionButton onClick={handleShare} disabled={isSharing} className="bg-sky-500 text-white hover:bg-sky-600">
                                 <ShareIcon className="w-4 h-4 sm:mr-2" />
-                                <span className="hidden sm:inline">{copied ? 'Link Copied!' : 'Share Profile'}</span>
+                                <span className="hidden sm:inline">{isSharing ? 'Sharing...' : copied ? 'Link Copied!' : 'Share Profile'}</span>
                             </ActionButton>
                         </div>
                         <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">

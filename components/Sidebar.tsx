@@ -7,10 +7,10 @@ interface SidebarProps {
   onNavigate: (view: string) => void;
   currentUser: User;
   onEditMyProfile: () => void;
-  onLogout: () => void;
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
   onClearAllNotifications: (userId: number) => void;
+  impersonatedRole: UserRole | null;
 }
 
 const navConfig = {
@@ -43,10 +43,11 @@ const navConfig = {
 };
 
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, onLogout, notifications, onNotificationClick, onClearAllNotifications }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, notifications, onNotificationClick, onClearAllNotifications, impersonatedRole }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const navItems = navConfig[currentUser.role];
+  const displayRole = impersonatedRole || currentUser.role;
+  const navItems = navConfig[displayRole];
 
   const baseClasses = 'flex items-center px-3 py-2.5 text-sm font-medium rounded-md';
   const activeClasses = 'bg-primary-600 text-white shadow-sm';
@@ -141,10 +142,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                 <a href="#" onClick={(e) => { e.preventDefault(); onEditMyProfile(); setIsDropdownOpen(false); }} className="flex items-center px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
                     <PencilIcon className="w-4 h-4 mr-3 text-slate-400" />
                     <span>Edit My Profile</span>
-                </a>
-                 <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); setIsDropdownOpen(false); }} className="flex items-center px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
-                    <UserCircleIcon className="w-4 h-4 mr-3 text-slate-400" />
-                    <span>Logout</span>
                 </a>
             </div>
         )}
