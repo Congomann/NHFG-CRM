@@ -175,6 +175,10 @@ export interface Message {
   text: string;
   timestamp: string;
   edited?: boolean;
+  status: 'active' | 'trashed';
+  source: 'internal' | 'public_profile';
+  deletedTimestamp?: string;
+  deletedBy?: number;
 }
 
 export interface Notification {

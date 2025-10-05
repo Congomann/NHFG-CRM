@@ -203,6 +203,8 @@ export const useDatabase = () => {
                 receiverId,
                 text,
                 timestamp: new Date().toISOString(),
+                status: 'active',
+                source: 'internal',
             };
             return [...prev, newMessage];
         });
@@ -381,6 +383,8 @@ export const useDatabase = () => {
                 receiverId: agentId,
                 text: messageText,
                 timestamp: new Date().toISOString(),
+                status: 'active',
+                source: 'public_profile',
             };
             return [...prev, newMessage];
         });
@@ -486,6 +490,41 @@ export const useDatabase = () => {
     const handleDeleteTestimonial = useCallback((testimonialId: number) => {
         setTestimonials(prev => prev.filter(t => t.id !== testimonialId));
     }, [setTestimonials]);
+    
+    const handleTrashMessage = useCallback((messageId: number, currentUser: User) => {
+        setMessages(prev => {
+            const msgToTrash = prev.find(m => m.id === messageId);
+            if (!msgToTrash) return prev;
+
+            const canDelete = currentUser.role === UserRole.ADMIN || (msgToTrash.source === 'public_profile' && [UserRole.AGENT, UserRole.SUB_ADMIN].includes(currentUser.role));
+
+            if (canDelete) {
+                return prev.map(m => m.id === messageId ? { ...m, status: 'trashed', deletedTimestamp: new Date().toISOString(), deletedBy: currentUser.id } : m);
+            }
+            return prev;
+        });
+    }, [setMessages]);
+
+    const handleRestoreMessage = useCallback((messageId: number) => {
+        setMessages(prev => prev.map(m => {
+            if (m.id === messageId) {
+                const { deletedTimestamp, deletedBy, ...rest } = m;
+                return { ...rest, status: 'active' };
+            }
+            return m;
+        }));
+    }, [setMessages]);
+
+    const handlePermanentlyDeleteMessage = useCallback((messageId: number, currentUser: User) => {
+        if (currentUser.role !== UserRole.ADMIN) {
+            alert("You do not have permission to permanently delete messages.");
+            return;
+        }
+        if (window.confirm("This message will be deleted forever and cannot be recovered. Are you sure?")) {
+            setMessages(prev => prev.filter(m => m.id !== messageId));
+        }
+    }, [setMessages]);
+
 
     return {
         isLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials,
@@ -500,6 +539,7 @@ export const useDatabase = () => {
             handleMarkNotificationAsRead, handleClearAllNotifications,
             handleSaveCalendarNote, handleDeleteCalendarNote,
             handleAddTestimonial, handleUpdateTestimonialStatus, handleDeleteTestimonial,
+            handleTrashMessage, handleRestoreMessage, handlePermanentlyDeleteMessage,
         }
     };
 };

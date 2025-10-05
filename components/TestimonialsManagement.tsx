@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Testimonial, TestimonialStatus } from '../types';
 import { CheckCircleIcon, DeleteIcon, ChatBubbleLeftRightIcon } from './icons';
 
@@ -28,15 +28,15 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
     };
   }, [testimonials]);
 
-  const handleApprove = (id: number) => {
+  const handleApprove = useCallback((id: number) => {
     onUpdateTestimonialStatus(id, TestimonialStatus.APPROVED);
-  };
+  }, [onUpdateTestimonialStatus]);
   
-  const handleDelete = (id: number) => {
+  const handleDelete = useCallback((id: number) => {
     if (window.confirm('Are you sure you want to permanently delete this testimonial?')) {
         onDeleteTestimonial(id);
     }
-  };
+  }, [onDeleteTestimonial]);
 
   const TabButton: React.FC<{tabId: 'pending' | 'approved', label: string, count: number}> = ({ tabId, label, count }) => (
     <button
@@ -47,29 +47,50 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
     </button>
   );
 
-  const TestimonialCard: React.FC<{ testimonial: Testimonial, isPending?: boolean }> = ({ testimonial, isPending = false }) => (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col justify-between">
-      <div>
-        <blockquote className="italic text-slate-600 border-l-4 border-slate-200 pl-4">
-          "{testimonial.quote}"
-        </blockquote>
-        <p className="text-right font-semibold text-slate-800 mt-2">&ndash; {testimonial.author}</p>
-      </div>
-      <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-200">
-        <p className="text-xs text-slate-500">Submitted: {testimonial.submissionDate}</p>
-        <div className="flex items-center space-x-2">
-            {isPending && (
-                <button onClick={() => handleApprove(testimonial.id)} className="flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-800 p-1.5 rounded-md hover:bg-emerald-50 transition-colors">
-                    <CheckCircleIcon className="w-5 h-5 mr-1" /> Approve
+  const TestimonialCard: React.FC<{ testimonial: Testimonial, isPending?: boolean }> = ({ testimonial, isPending = false }) => {
+    const QuoteIcon = () => (
+      <svg className="w-8 h-8 text-slate-200" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 14">
+        <path d="M6 0H2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4v1a3 3 0 0 1-3 3H2a1 1 0 0 0 0 2h1a5.006 5.006 0 0 0 5-5V2a2 2 0 0 0-2-2Zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4v1a3 3 0 0 1-3 3h-1a1 1 0 0 0 0 2h1a5.006 5.006 0 0 0 5-5V2a2 2 0 0 0-2-2Z"/>
+      </svg>
+    );
+
+    return (
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-lg transition-shadow flex flex-col h-full card-enter">
+        <div className="p-6 flex-grow">
+          <QuoteIcon />
+          <blockquote className="mt-2 text-lg text-slate-700 leading-relaxed">
+            "{testimonial.quote}"
+          </blockquote>
+        </div>
+        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200">
+          <div className="flex justify-between items-center">
+             <div>
+                <p className="font-bold text-slate-800">{testimonial.author}</p>
+                <p className="text-xs text-slate-500">Submitted: {testimonial.submissionDate}</p>
+             </div>
+             <div className="flex items-center space-x-2">
+                {isPending && (
+                    <button 
+                        onClick={() => handleApprove(testimonial.id)} 
+                        className="flex items-center text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-md transition-colors button-press"
+                        aria-label={`Approve testimonial from ${testimonial.author}`}
+                    >
+                        <CheckCircleIcon className="w-5 h-5 mr-1.5" /> Approve
+                    </button>
+                )}
+                <button 
+                    onClick={() => handleDelete(testimonial.id)} 
+                    className="flex items-center text-sm font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-md transition-colors button-press"
+                    aria-label={`Delete testimonial from ${testimonial.author}`}
+                >
+                    <DeleteIcon className="w-5 h-5 mr-1.5" /> Delete
                 </button>
-            )}
-            <button onClick={() => handleDelete(testimonial.id)} className="flex items-center text-sm font-semibold text-rose-600 hover:text-rose-800 p-1.5 rounded-md hover:bg-rose-50 transition-colors">
-                <DeleteIcon className="w-5 h-5 mr-1" /> Delete
-            </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-8">

@@ -403,6 +403,9 @@ const App: React.FC = () => {
                     onSendMessage={(receiverId, text) => handlers.handleSendMessage(currentUser.id, receiverId, text)}
                     onEditMessage={handlers.handleEditMessage}
                     initialSelectedUserId={preselectedId ? Number(preselectedId) : undefined}
+                    onTrashMessage={(messageId) => handlers.handleTrashMessage(messageId, currentUser)}
+                    onRestoreMessage={handlers.handleRestoreMessage}
+                    onPermanentlyDeleteMessage={(messageId) => handlers.handlePermanentlyDeleteMessage(messageId, currentUser)}
                 />;
     }
 
