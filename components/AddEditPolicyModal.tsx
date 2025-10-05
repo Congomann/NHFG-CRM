@@ -92,8 +92,8 @@ const AddEditPolicyModal: React.FC<AddEditPolicyModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 modal-backdrop">
+      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto modal-panel">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-slate-900">{policyToEdit ? 'Edit Policy' : 'Add New Policy'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">

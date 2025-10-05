@@ -17,7 +17,7 @@ type AppData = {
     testimonials: Testimonial[];
 };
 
-export const useDatabase = (isLoggedIn: boolean) => {
+export const useDatabase = (currentUser: User | null) => {
     const [data, setData] = useState<AppData>({
         users: [], agents: [], clients: [], policies: [], interactions: [],
         tasks: [], messages: [], licenses: [], notifications: [],
@@ -25,6 +25,7 @@ export const useDatabase = (isLoggedIn: boolean) => {
     });
     const [isLoading, setIsLoading] = useState(true);
     const { addToast } = useToast();
+    const isLoggedIn = !!currentUser;
 
     const fetchData = useCallback(async (isPolling = false) => {
         if (!isLoggedIn) {
@@ -140,10 +141,38 @@ export const useDatabase = (isLoggedIn: boolean) => {
             () => apiClient.del(`/api/testimonials/${id}`),
             'Testimonial Deleted', 'The testimonial has been removed.'
         ),
-        handleSendMessage: (receiverId: number, text: string) => handleApiCall(
-            () => apiClient.sendMessage(receiverId, text),
-            '', '' // No toast for sending a message, it appears instantly
-        ),
+        handleSendMessage: (receiverId: number, text: string) => {
+            if (!currentUser) return;
+
+            // Optimistic update: add message to state immediately
+            const tempId = -Date.now(); // Temporary unique ID
+            const tempMessage: Message = {
+                id: tempId,
+                senderId: currentUser.id,
+                receiverId: receiverId,
+                text: text,
+                timestamp: new Date().toISOString(),
+                status: 'active',
+                source: 'internal',
+                isRead: true, // Read by the sender
+            };
+
+            setData(prevData => ({
+                ...prevData,
+                messages: [...prevData.messages, tempMessage],
+            }));
+
+            // Send to server in the background, and handle potential errors
+            apiClient.sendMessage(receiverId, text)
+                .catch(error => {
+                    addToast('Error', 'Failed to send message.', 'error');
+                    // On error, revert the optimistic update by removing the temporary message
+                    setData(prevData => ({
+                        ...prevData,
+                        messages: prevData.messages.filter(m => m.id !== tempId)
+                    }));
+                });
+        },
         handleEditMessage: (messageId: number, text: string) => handleApiCall(
             () => apiClient.editMessage(messageId, text),
             'Message Edited', 'Your message has been updated.'

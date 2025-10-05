@@ -49,10 +49,13 @@
 
       /* --- Animations --- */
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes fadeAndScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-      @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes toast-in-right { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-      @keyframes toast-out-right { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+      @keyframes fadeAndScaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+      @keyframes slideInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+      
+      /* Toast animations slide from top right */
+      @keyframes toast-in { from { transform: translateX(100%) translateY(-20px); opacity: 0; } to { transform: translateX(0) translateY(0); opacity: 1; } }
+      @keyframes toast-out { from { transform: translateX(0) translateY(0); opacity: 1; } to { transform: translateX(100%) translateY(-20px); opacity: 0; } }
+      
       @keyframes float {
         0% { transform: translateY(0px); }
         50% { transform: translateY(-8px); }
@@ -63,17 +66,18 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      .page-enter { animation: slideInUp 0.5s ease-out forwards; }
+      .page-enter { animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
       .modal-backdrop { animation: fadeIn 0.3s ease-out forwards; }
-      .modal-panel { animation: fadeAndScaleIn 0.3s ease-out forwards; }
-      .card-enter { animation: slideInUp 0.5s ease-out backwards; }
+      .modal-panel { animation: fadeAndScaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+      
+      .card-enter { animation: slideInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards; }
       .card-enter:nth-child(1) { animation-delay: 0.05s; }
       .card-enter:nth-child(2) { animation-delay: 0.1s; }
       .card-enter:nth-child(3) { animation-delay: 0.15s; }
       .card-enter:nth-child(4) { animation-delay: 0.2s; }
       .card-enter:nth-child(5) { animation-delay: 0.25s; }
       
-      .row-enter { animation: slideInUp 0.4s ease-out backwards; }
+      .row-enter { animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards; }
       .row-enter:nth-child(1) { animation-delay: 0.05s; }
       .row-enter:nth-child(2) { animation-delay: 0.1s; }
       .row-enter:nth-child(3) { animation-delay: 0.15s; }
@@ -85,19 +89,28 @@
       .row-enter:nth-child(9) { animation-delay: 0.45s; }
       .row-enter:nth-child(10) { animation-delay: 0.5s; }
 
-      .toast-enter { animation: toast-in-right 0.5s ease-out forwards; }
-      .toast-leave { animation: toast-out-right 0.5s ease-in forwards; }
+      .toast-enter { animation: toast-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+      .toast-leave { animation: toast-out 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
 
       /* --- Global Component Transitions --- */
-      button, a, input, select, [role="button"], .transition-all {
+      button, a, input, select, textarea, [role="button"], .transition-all {
         transition-property: all;
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 150ms;
+        transition-duration: 200ms;
       }
       
-      button:active, .button-press:active {
+      button:hover:not(:disabled), [role="button"]:hover:not(:disabled), .button-hover:hover:not(:disabled) {
+        transform: scale(1.03);
+      }
+      
+      button:active:not(:disabled), .button-press:active:not(:disabled) {
         transform: scale(0.97);
         transition-duration: 100ms;
+      }
+      
+      /* Smooth focus transition for inputs */
+      input, select, textarea {
+        transition-property: border-color, box-shadow;
       }
     </style>
   <script type="importmap">

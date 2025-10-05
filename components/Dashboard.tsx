@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import SummaryCard from './SummaryCard';
 import { ClientsIcon, DashboardIcon, TasksIcon } from './icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Client, Policy, PolicyType, Task, User, UserRole, Agent } from '../types';
+import { Client, Policy, PolicyType, Task, User, UserRole, Agent, ClientStatus } from '../types';
 import AgentPerformanceDetail from './AgentPerformanceDetail';
 
 interface DashboardProps {
@@ -60,6 +60,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
 
     const pieData = Object.entries(policiesByType).map(([name, value]) => ({ name, value }));
     const COLORS = ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc'];
+
+    const clientStatusData = useMemo(() => {
+        if (!clients) return [];
+        const counts = clients.reduce((acc, client) => {
+            acc[client.status] = (acc[client.status] || 0) + 1;
+            return acc;
+        }, {} as Record<ClientStatus, number>);
+
+        return Object.values(ClientStatus).map(status => ({
+            name: status,
+            value: counts[status] || 0,
+        })).filter(item => item.value > 0);
+    }, [clients]);
+
+    const STATUS_COLORS = {
+        [ClientStatus.ACTIVE]: '#34d399', // emerald-400
+        [ClientStatus.LEAD]: '#facc15', // amber-400
+        [ClientStatus.INACTIVE]: '#fb7185', // rose-400
+    };
+
 
     const salesData = [
         { name: 'Jan', premium: 4000 }, { name: 'Feb', premium: 3000 },
@@ -123,19 +143,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                     </ResponsiveContainer>
                 </div>
             </div>
-             <div className="bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.8s' }}>
-                <h2 className="text-xl font-bold text-slate-700 mb-4">Upcoming Tasks</h2>
-                <ul className="divide-y divide-slate-200">
-                    {upcomingTasks.map(task => (
-                        <li key={task.id} className="py-3 flex justify-between items-center">
-                            <div>
-                                <p className="font-medium text-slate-800">{task.title}</p>
-                                <p className="text-sm text-slate-500">Due: {task.dueDate}</p>
-                            </div>
-                            {task.clientId && <button className="text-sm text-primary-600 hover:underline">View Client</button>}
-                        </li>
-                    ))}
-                </ul>
+             <div className={`grid grid-cols-1 ${user.role === UserRole.ADMIN ? 'lg:grid-cols-2' : ''} gap-6`}>
+                <div className="bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.8s' }}>
+                    <h2 className="text-xl font-bold text-slate-700 mb-4">Upcoming Tasks</h2>
+                    <ul className="divide-y divide-slate-200">
+                        {upcomingTasks.map(task => (
+                            <li key={task.id} className="py-3 flex justify-between items-center">
+                                <div>
+                                    <p className="font-medium text-slate-800">{task.title}</p>
+                                    <p className="text-sm text-slate-500">Due: {task.dueDate}</p>
+                                </div>
+                                {task.clientId && <button className="text-sm text-primary-600 hover:underline">View Client</button>}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                {user.role === UserRole.ADMIN && (
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.9s' }}>
+                        <h2 className="text-xl font-bold text-slate-700 mb-4">Client Status Distribution</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie 
+                                    data={clientStatusData} 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    labelLine={false} 
+                                    outerRadius={100} 
+                                    fill="#8884d8" 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    label={({ name, percent }) => `${name} ${((+(percent || 0)) * 100).toFixed(0)}%`}
+                                >
+                                    {clientStatusData.map((entry) => (
+                                        <Cell key={`cell-${entry.name}`} fill={STATUS_COLORS[entry.name as ClientStatus]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => `${value} clients`} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
             </div>
         </div>
     );

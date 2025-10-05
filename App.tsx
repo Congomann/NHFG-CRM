@@ -60,7 +60,7 @@ const App: React.FC = () => {
   const [authView, setAuthView] = useState<AuthView>('login');
   const [userForVerification, setUserForVerification] = useState<User | null>(null);
   
-  const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(!!currentUser);
+  const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(currentUser);
 
   // UI state
   const [currentView, setCurrentView] = useState('dashboard');
