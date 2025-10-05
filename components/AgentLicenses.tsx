@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { License, LicenseType } from '../types';
-import { DeleteIcon, PlusIcon } from './icons';
+import { TrashIcon, PlusIcon } from './icons';
 
 interface AgentLicensesProps {
     agentId: number;
@@ -18,6 +18,7 @@ const AgentLicenses: React.FC<AgentLicensesProps> = ({ agentId, licenses, onAddL
         fileName: '',
         fileContent: '',
     });
+    const [error, setError] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -43,8 +44,9 @@ const AgentLicenses: React.FC<AgentLicensesProps> = ({ agentId, licenses, onAddL
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         if (!form.fileContent) {
-            alert('Please select a file to upload.');
+            setError('Please select a file to upload.');
             return;
         }
         onAddLicense({ agentId, ...form });
@@ -106,6 +108,7 @@ const AgentLicenses: React.FC<AgentLicensesProps> = ({ agentId, licenses, onAddL
                          <label className="block text-sm font-medium text-slate-700 mb-1.5">License Document</label>
                          <input type="file" name="file" onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png" required className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-600 hover:file:bg-primary-100"/>
                     </div>
+                    {error && <p className="text-sm text-rose-600 bg-rose-50 p-2 rounded-md">{error}</p>}
                     <button type="submit" className="w-full flex items-center justify-center bg-primary-600 text-white font-semibold px-4 py-2.5 rounded-md shadow-sm hover:bg-primary-500">
                         <PlusIcon className="w-5 h-5 mr-2" /> Add License
                     </button>
@@ -128,7 +131,7 @@ const AgentLicenses: React.FC<AgentLicensesProps> = ({ agentId, licenses, onAddL
                                         <p className="text-sm text-slate-500">File: {lic.fileName}</p>
                                     )}
                                 </div>
-                                <button onClick={() => onDeleteLicense(lic.id)} className="text-slate-400 hover:text-rose-600"><DeleteIcon /></button>
+                                <button onClick={() => onDeleteLicense(lic.id)} className="text-slate-400 hover:text-rose-600"><TrashIcon /></button>
                             </div>
                             <div className="flex justify-between items-center mt-2 text-sm border-t border-slate-200 pt-2">
                                 <p>Expires: {lic.expirationDate}</p>

@@ -11,7 +11,6 @@ interface SidebarProps {
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
   onClearAllNotifications: (userId: number) => void;
-  onSwitchUser: (role: UserRole) => void;
 }
 
 const navConfig = {
@@ -44,7 +43,7 @@ const navConfig = {
 };
 
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, onLogout, notifications, onNotificationClick, onClearAllNotifications, onSwitchUser }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, onLogout, notifications, onNotificationClick, onClearAllNotifications }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const navItems = navConfig[currentUser.role];
@@ -80,42 +79,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
     if (interval > 1) return Math.floor(interval) + "m ago";
     return "Just now";
   }
-
-  const DemoViewSwitcher = () => {
-    const getButtonClasses = (role: UserRole) => {
-      const base = "w-full text-left flex items-center px-3 py-2 text-sm font-medium rounded-md button-press ";
-      if (currentUser.role === role) {
-          return base + "bg-slate-800 text-white font-semibold";
-      }
-      return base + "text-slate-400 hover:bg-slate-800 hover:text-white";
-    };
-
-    return (
-      <div className="mt-8 px-2 py-4 border-t border-slate-700">
-        <h3 className="px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center">
-          <EyeIcon className="w-4 h-4 mr-2" />
-          Demo View Switcher
-        </h3>
-        <ul className="space-y-1">
-          <li>
-            <button onClick={() => onSwitchUser(UserRole.ADMIN)} className={getButtonClasses(UserRole.ADMIN)}>
-              Switch to Admin
-            </button>
-          </li>
-          <li>
-            <button onClick={() => onSwitchUser(UserRole.SUB_ADMIN)} className={getButtonClasses(UserRole.SUB_ADMIN)}>
-              Switch to Sub-Admin
-            </button>
-          </li>
-          <li>
-            <button onClick={() => onSwitchUser(UserRole.AGENT)} className={getButtonClasses(UserRole.AGENT)}>
-              Switch to Agent
-            </button>
-          </li>
-        </ul>
-      </div>
-    );
-  };
 
   return (
     <div className="w-64 bg-slate-900 h-screen p-4 flex flex-col fixed shadow-2xl">
@@ -168,8 +131,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
         </ul>
       </nav>
       
-      <DemoViewSwitcher />
-
       <div className="mt-auto relative">
         <div className="p-2 rounded-lg hover:bg-slate-800 cursor-pointer" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <div className="flex items-center">

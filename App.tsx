@@ -77,20 +77,17 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isLoading) {
       const loggedInUserId = localStorage.getItem('loggedInUserId');
-      let sessionUser: User | undefined | null = null;
-
       if (loggedInUserId) {
-        sessionUser = users.find(u => u.id === parseInt(loggedInUserId, 10));
-      }
-
-      if (sessionUser) {
-        setCurrentUser(sessionUser);
-      } else {
-        const adminUser = users.find(u => u.role === UserRole.ADMIN);
-        if (adminUser) {
-          setCurrentUser(adminUser);
-          localStorage.setItem('loggedInUserId', adminUser.id.toString());
+        const sessionUser = users.find(u => u.id === parseInt(loggedInUserId, 10));
+        if (sessionUser) {
+            setCurrentUser(sessionUser);
+        } else {
+            // User ID in storage is invalid, clear it
+            localStorage.removeItem('loggedInUserId');
+            setCurrentUser(null);
         }
+      } else {
+          setCurrentUser(null);
       }
     }
   }, [isLoading, users]);
@@ -123,7 +120,13 @@ const App: React.FC = () => {
 
   const handleLogin = (email: string, password: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user && user.password === password) {
+
+    // For mock users from constants.ts without a password, allow 'password123' for demo purposes.
+    // For registered users, the password from the registration form must match.
+    const isMockUserLogin = user && user.password === undefined && password === 'password123';
+    const isRegisteredUserLogin = user && user.password !== undefined && user.password === password;
+
+    if (user && (isMockUserLogin || isRegisteredUserLogin)) {
         if (!user.isVerified && user.role !== UserRole.ADMIN) {
             setAuthError('Please verify your email before logging in.');
             setUserForVerification(user);
@@ -134,6 +137,9 @@ const App: React.FC = () => {
         localStorage.setItem('loggedInUserId', user.id.toString());
         setAuthError(null);
         handleNavigation('dashboard');
+        if (isMockUserLogin) {
+            addToast('Logged In (Demo)', `Logged in as mock user ${user.name}.`, 'info');
+        }
         return true;
     }
     setAuthError('Invalid email or password.');
@@ -152,41 +158,21 @@ const App: React.FC = () => {
       if (newUser) {
           setUserForVerification(newUser);
           setAuthView('verifyEmail');
+          addToast('Account Created', 'Please check your "email" for a verification code.', 'success');
+      } else {
+          addToast('Registration Failed', 'An account with this email already exists.', 'error');
       }
   };
 
   const handleVerify = (userId: number, code: string) => {
       const success = handlers.handleVerifyEmail(userId, code);
       if (success) {
-          alert('Email verified successfully! Please log in.');
+          addToast('Success!', 'Email verified successfully! Please log in.', 'success');
           setUserForVerification(null);
           setAuthView('login');
       } else {
-          alert('Invalid verification code.');
+          addToast('Verification Failed', 'The verification code is invalid.', 'error');
       }
-  };
-
-  const handleSwitchUser = (role: UserRole) => {
-    let userToSwitchTo: User | undefined;
-    switch (role) {
-      case UserRole.ADMIN:
-        userToSwitchTo = users.find(u => u.id === 1); // Adama Lee
-        break;
-      case UserRole.SUB_ADMIN:
-        userToSwitchTo = users.find(u => u.id === 2); // Gaius Baltar
-        break;
-      case UserRole.AGENT:
-        userToSwitchTo = users.find(u => u.id === 3); // Kara Thrace
-        break;
-      default:
-        userToSwitchTo = users.find(u => u.id === 1); // Default to admin
-    }
-
-    if (userToSwitchTo) {
-      setCurrentUser(userToSwitchTo);
-      localStorage.setItem('loggedInUserId', userToSwitchTo.id.toString());
-      handleNavigation('dashboard');
-    }
   };
 
   const handleNotificationClick = (notification: Notification) => {
@@ -405,7 +391,12 @@ const App: React.FC = () => {
                     initialSelectedUserId={preselectedId ? Number(preselectedId) : undefined}
                     onTrashMessage={(messageId) => handlers.handleTrashMessage(messageId, currentUser)}
                     onRestoreMessage={handlers.handleRestoreMessage}
-                    onPermanentlyDeleteMessage={(messageId) => handlers.handlePermanentlyDeleteMessage(messageId, currentUser)}
+                    onPermanentlyDeleteMessage={(messageId) => {
+                        const success = handlers.handlePermanentlyDeleteMessage(messageId, currentUser);
+                        if (!success) {
+                            addToast('Permission Denied', 'You do not have permission to permanently delete messages.', 'error');
+                        }
+                    }}
                 />;
     }
 
@@ -437,6 +428,7 @@ const App: React.FC = () => {
                         clients={clients}
                         onSaveTask={(task) => handlers.handleSaveTask(task, currentUser.id, currentUser.role)}
                         onToggleTask={handlers.handleToggleTask}
+                        onDeleteTask={handlers.handleDeleteTask}
                         onSelectClient={(id) => handleNavigation(`client/${id}`)}
                     />;
         }
@@ -554,7 +546,6 @@ const App: React.FC = () => {
       }
       
       if (!currentUser) {
-        // This block will now be skipped in demo mode, but is kept for potential future use.
         switch(authView) {
             case 'register':
                 return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthView('login')} />;
@@ -582,7 +573,6 @@ const App: React.FC = () => {
             notifications={notifications}
             onNotificationClick={handleNotificationClick}
             onClearAllNotifications={handlers.handleClearAllNotifications}
-            onSwitchUser={handleSwitchUser}
             />}
           <main className={`flex-1 overflow-y-auto ${!isAgentProfileView ? 'ml-64' : ''}`}>
             <div key={currentView} className="page-enter">

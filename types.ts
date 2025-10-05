@@ -58,8 +58,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  // NOTE: In a real application, NEVER store passwords in plaintext. This should be a securely hashed value.
-  password: string;
+  // NOTE: In a real application, NEVER store passwords in plaintext. This is for simulation only.
+  password?: string;
   role: UserRole;
   avatar: string;
   title: string;

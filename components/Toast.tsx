@@ -1,4 +1,3 @@
-// FIX: Add useCallback to the list of imports from React.
 import React, { useEffect, useState, useCallback } from 'react';
 import { ToastType } from '../types';
 import { CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon, InfoIcon, CloseIcon } from './icons';

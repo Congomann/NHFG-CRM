@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Testimonial, TestimonialStatus } from '../types';
-import { CheckCircleIcon, DeleteIcon, ChatBubbleLeftRightIcon } from './icons';
+import { CheckCircleIcon, TrashIcon, ChatBubbleLeftRightIcon } from './icons';
 
 interface TestimonialsManagementProps {
   testimonials: Testimonial[];
@@ -27,16 +27,6 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
         approvedTestimonials: approved.sort((a,b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime())
     };
   }, [testimonials]);
-
-  const handleApprove = useCallback((id: number) => {
-    onUpdateTestimonialStatus(id, TestimonialStatus.APPROVED);
-  }, [onUpdateTestimonialStatus]);
-  
-  const handleDelete = useCallback((id: number) => {
-    if (window.confirm('Are you sure you want to permanently delete this testimonial?')) {
-        onDeleteTestimonial(id);
-    }
-  }, [onDeleteTestimonial]);
 
   const TabButton: React.FC<{tabId: 'pending' | 'approved', label: string, count: number}> = ({ tabId, label, count }) => (
     <button
@@ -71,7 +61,7 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
              <div className="flex items-center space-x-2">
                 {isPending && (
                     <button 
-                        onClick={() => handleApprove(testimonial.id)} 
+                        onClick={() => onUpdateTestimonialStatus(testimonial.id, TestimonialStatus.APPROVED)}
                         className="flex items-center text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-md transition-colors button-press"
                         aria-label={`Approve testimonial from ${testimonial.author}`}
                     >
@@ -79,11 +69,15 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
                     </button>
                 )}
                 <button 
-                    onClick={() => handleDelete(testimonial.id)} 
+                    onClick={() => {
+                        if (window.confirm('Are you sure you want to permanently delete this testimonial?')) {
+                            onDeleteTestimonial(testimonial.id);
+                        }
+                    }}
                     className="flex items-center text-sm font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-md transition-colors button-press"
                     aria-label={`Delete testimonial from ${testimonial.author}`}
                 >
-                    <DeleteIcon className="w-5 h-5 mr-1.5" /> Delete
+                    <TrashIcon className="w-5 h-5 mr-1.5" /> Delete
                 </button>
             </div>
           </div>

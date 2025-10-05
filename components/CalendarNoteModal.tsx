@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarNote, User } from '../types';
-import { CloseIcon, PlusIcon, TagIcon, DeleteIcon, PencilIcon } from './icons';
+import { CloseIcon, PlusIcon, TagIcon, TrashIcon, PencilIcon } from './icons';
 import { NOTE_COLORS } from '../constants';
 
 interface CalendarNoteModalProps {
@@ -87,7 +87,7 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
               ) : (
                 <>
                   <button onClick={() => setEditingNote(note)} className="text-slate-500 hover:text-primary-600"><PencilIcon className="w-4 h-4" /></button>
-                  <button onClick={() => onDelete(note.id)} className="text-slate-500 hover:text-rose-600"><DeleteIcon className="w-4 h-4" /></button>
+                  <button onClick={() => onDelete(note.id)} className="text-slate-500 hover:text-rose-600"><TrashIcon className="w-4 h-4" /></button>
                 </>
               )}
             </div>

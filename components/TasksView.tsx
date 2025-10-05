@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Task, Client } from '../types';
-import { PlusIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon } from './icons';
 import AddEditTaskModal from './AddEditTaskModal';
 
 interface TasksViewProps {
@@ -8,12 +8,13 @@ interface TasksViewProps {
   clients: Client[];
   onSaveTask: (task: Omit<Task, 'id' | 'completed'> & { id?: number }) => void;
   onToggleTask: (taskId: number) => void;
+  onDeleteTask: (taskId: number) => void;
   onSelectClient: (clientId: number) => void;
 }
 
 type FilterStatus = 'all' | 'active' | 'completed';
 
-const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onToggleTask, onSelectClient }) => {
+const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onToggleTask, onDeleteTask, onSelectClient }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('active');
@@ -111,8 +112,25 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
                   </div>
                 </div>
               </div>
-              <div>
-                <button onClick={() => handleEditTaskClick(task)} className="text-sm text-primary-600 hover:underline px-2 py-1">Edit</button>
+              <div className="flex items-center space-x-2">
+                <button 
+                    onClick={() => handleEditTaskClick(task)} 
+                    className="text-slate-400 hover:text-primary-600 p-1"
+                    aria-label={`Edit task: ${task.title}`}
+                >
+                    <PencilIcon className="w-5 h-5" />
+                </button>
+                <button
+                    onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this task?')) {
+                            onDeleteTask(task.id);
+                        }
+                    }}
+                    className="text-slate-400 hover:text-rose-600 p-1"
+                    aria-label={`Delete task: ${task.title}`}
+                >
+                    <TrashIcon className="w-5 h-5" />
+                </button>
               </div>
             </li>
           )) : (

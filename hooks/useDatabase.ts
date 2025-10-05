@@ -44,9 +44,10 @@ export const useDatabase = () => {
     
     const handleRegisterUser = useCallback((userData: Omit<User, 'id' | 'title' | 'avatar'>): User | null => {
       let newUser: User | null = null;
+      let userExists = false;
       setUsers(prev => {
         if (prev.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-          alert('An account with this email already exists.');
+          userExists = true;
           return prev;
         }
         const allIds = [...prev.map(u => u.id), ...agents.map(a => a.id)];
@@ -63,6 +64,10 @@ export const useDatabase = () => {
         };
         return [...prev, newUser];
       });
+
+      if (userExists) {
+        return null;
+      }
 
       if (newUser) {
         setAgents(prev => {
@@ -239,6 +244,10 @@ export const useDatabase = () => {
 
     const handleToggleTask = useCallback((taskId: number) => {
         setTasks(prev => prev.map(task => task.id === taskId ? { ...task, completed: !task.completed } : task));
+    }, [setTasks]);
+
+    const handleDeleteTask = useCallback((taskId: number) => {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
     }, [setTasks]);
 
     const handleUpdateClientStatus = useCallback((clientId: number, newStatus: ClientStatus) => {
@@ -515,14 +524,14 @@ export const useDatabase = () => {
         }));
     }, [setMessages]);
 
-    const handlePermanentlyDeleteMessage = useCallback((messageId: number, currentUser: User) => {
+    const handlePermanentlyDeleteMessage = useCallback((messageId: number, currentUser: User): boolean => {
         if (currentUser.role !== UserRole.ADMIN) {
-            alert("You do not have permission to permanently delete messages.");
-            return;
+            return false;
         }
         if (window.confirm("This message will be deleted forever and cannot be recovered. Are you sure?")) {
             setMessages(prev => prev.filter(m => m.id !== messageId));
         }
+        return true;
     }, [setMessages]);
 
 
@@ -531,6 +540,7 @@ export const useDatabase = () => {
         handlers: {
             handleRegisterUser, handleVerifyEmail,
             handleAddClient, handleAddLead, handleUpdateLead, handleDeleteLead, handleSendMessage, handleEditMessage, handleSaveTask, handleToggleTask,
+            handleDeleteTask,
             handleUpdateClientStatus, handleUpdateAgentProfile, handleSavePolicy, handleSaveAgent, handleUpdateMyProfile,
             handleAddLeadFromProfile, handleUpdatePolicy,
             handleApproveAgent, handleDeleteAgent,

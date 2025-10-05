@@ -1,6 +1,7 @@
 import React from 'react';
 import { Client } from '../types';
-import { DeleteIcon, PencilIcon, PlusIcon } from './icons';
+import { TrashIcon, PencilIcon, PlusIcon } from './icons';
+import { useToast } from '../contexts/ToastContext';
 
 interface LeadDistributionProps {
   leads: Client[];
@@ -11,6 +12,7 @@ interface LeadDistributionProps {
 }
 
 const LeadDistribution: React.FC<LeadDistributionProps> = ({ leads, onSelectLead, onCreateLead, onEditLead, onDeleteLead }) => {
+  const { addToast } = useToast();
   const unassignedLeads = leads.filter(lead => !lead.agentId);
 
   const handleDelete = (e: React.MouseEvent, leadId: number) => {
@@ -41,8 +43,8 @@ const LeadDistribution: React.FC<LeadDistributionProps> = ({ leads, onSelectLead
         <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h2 className="text-xl font-bold text-slate-700">Unassigned Leads ({unassignedLeads.length})</h2>
             <div className="flex space-x-2">
-                <button className="bg-secondary text-white px-3 py-1.5 text-sm rounded-md shadow-sm hover:bg-slate-700 transition-colors button-press">Broadcast</button>
-                <button className="bg-secondary text-white px-3 py-1.5 text-sm rounded-md shadow-sm hover:bg-slate-700 transition-colors button-press">Round-Robin</button>
+                <button onClick={() => addToast('Feature Coming Soon', 'Broadcasting to all available agents is not yet implemented.', 'info')} className="bg-secondary text-white px-3 py-1.5 text-sm rounded-md shadow-sm hover:bg-slate-700 transition-colors button-press">Broadcast</button>
+                <button onClick={() => addToast('Feature Coming Soon', 'Round-robin assignment to the next available agent is not yet implemented.', 'info')} className="bg-secondary text-white px-3 py-1.5 text-sm rounded-md shadow-sm hover:bg-slate-700 transition-colors button-press">Round-Robin</button>
             </div>
         </div>
         <table className="min-w-full divide-y divide-slate-200">
@@ -71,7 +73,7 @@ const LeadDistribution: React.FC<LeadDistributionProps> = ({ leads, onSelectLead
                       <PencilIcon />
                     </button>
                     <button onClick={(e) => handleDelete(e, lead.id)} className="text-slate-400 hover:text-rose-600" aria-label={`Delete ${lead.firstName} ${lead.lastName}`}>
-                      <DeleteIcon />
+                      <TrashIcon />
                     </button>
                   </div>
                 </td>

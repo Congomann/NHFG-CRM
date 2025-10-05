@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, User, UserRole, License, Testimonial, TestimonialStatus } from '../types';
-import { CrmLogoIcon, LocationPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, WhatsAppIcon, LinkedInIcon, FacebookIcon, MessageIcon, ClientsIcon, PencilIcon, InstagramIcon, TikTokIcon, TwitterIcon, SnapchatIcon, DeleteIcon, PlusIcon, InfoIcon, ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon, ShareIcon } from './icons';
+// FIX: Removed unused 'DeleteIcon' import to resolve module export error.
+import { CrmLogoIcon, LocationPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon, CalendarIcon, WhatsAppIcon, LinkedInIcon, FacebookIcon, MessageIcon, ClientsIcon, PencilIcon, InstagramIcon, TikTokIcon, TwitterIcon, SnapchatIcon, PlusIcon, InfoIcon, ShieldCheckIcon, CalendarDaysIcon, SunIcon, ArrowsUpDownIcon, ChartTrendingUpIcon, TruckIcon, CarIcon, WrenchScrewdriverIcon, HomeIcon, BuildingOfficeIcon, FireIcon, StethoscopeIcon, ShareIcon } from './icons';
 
 interface AgentProfileProps {
     agent: Agent;

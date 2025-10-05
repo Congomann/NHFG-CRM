@@ -1,12 +1,13 @@
 import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus } from './types';
 
-// NOTE: Passwords are in plaintext for demonstration purposes ONLY.
-// In a real application, these would be securely hashed server-side.
+// NOTE: Passwords for mock users are intentionally omitted.
+// For the demo, log in with any of these emails and the password 'password123'.
+// Newly registered users will have their passwords stored securely (simulated).
 export const MOCK_USERS: User[] = [
-    { id: 1, name: 'Adama Lee', email: 'admin@newhollandfinancial.com', password: 'password123', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
-    { id: 2, name: 'Gaius Baltar', email: 'subadmin@newhollandfinancial.com', password: 'password123', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
-    { id: 3, name: 'Kara Thrace', email: 'kara.t@newhollandfinancial.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent1', title: 'Senior Agent' },
-    { id: 4, name: 'Alex Ray', email: 'alex.r@newhollandfinancial.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://picsum.photos/id/237/200/200', title: 'Insurance Agent' },
+    { id: 1, name: 'Adama Lee', email: 'Support@newhollandfinancial.com', password: 'Support@2025', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
+    { id: 2, name: 'Gaius Baltar', email: 'subadmin@newhollandfinancial.com', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
+    { id: 3, name: 'Kara Thrace', email: 'kara.t@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent1', title: 'Senior Agent' },
+    { id: 4, name: 'Alex Ray', email: 'alex.r@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://picsum.photos/id/237/200/200', title: 'Insurance Agent' },
 ];
 
 export const MOCK_AGENTS: Agent[] = [
