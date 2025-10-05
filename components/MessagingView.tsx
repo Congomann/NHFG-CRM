@@ -137,20 +137,18 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
             </div>
             <div className="flex-1 p-6 overflow-y-auto">
                 {conversation.map(msg => {
+                    const isMyMessage = msg.senderId === currentUser.id;
                     const messageTime = new Date(msg.timestamp).getTime();
                     const currentTime = new Date().getTime();
-                    const isEditable = (currentTime - messageTime) < 2 * 60 * 1000;
-                    const canDelete = currentUser.role === UserRole.ADMIN || (msg.source === 'public_profile' && [UserRole.AGENT, UserRole.SUB_ADMIN].includes(currentUser.role));
+                    const isEditable = isMyMessage && (currentTime - messageTime) < 2 * 60 * 1000;
 
                     return (
-                        <div key={msg.id} className={`flex mb-2 items-start group ${msg.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}>
-                            {msg.senderId === currentUser.id && editingMessage?.id !== msg.id && (
+                        <div key={msg.id} className={`flex mb-2 items-start group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                            {isMyMessage && editingMessage?.id !== msg.id && (
                                 <div className="self-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                                    {canDelete && (
-                                         <button onClick={() => onTrashMessage(msg.id)} className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete message">
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    )}
+                                    <button onClick={() => onTrashMessage(msg.id)} className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete message">
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
                                     {isEditable && !msg.edited && (
                                         <button onClick={() => handleStartEdit(msg)} className="text-slate-400 hover:text-slate-600 p-1" aria-label="Edit message">
                                             <PencilIcon className="w-4 h-4" />
@@ -159,7 +157,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                                 </div>
                             )}
                             
-                            <div className={`rounded-lg px-4 py-2 max-w-lg ${msg.senderId === currentUser.id ? 'bg-primary-600 text-white' : 'bg-white shadow-sm'}`}>
+                            <div className={`rounded-lg px-4 py-2 max-w-lg ${isMyMessage ? 'bg-primary-600 text-white' : 'bg-white shadow-sm'}`}>
                                 {editingMessage?.id === msg.id ? (
                                     <div className="w-full">
                                         <textarea
@@ -190,11 +188,11 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                                 ) : (
                                     <div className="flex items-end">
                                         <p className="whitespace-pre-wrap">{msg.text}</p>
-                                        {msg.edited && <span className={`text-xs ml-2 ${msg.senderId === currentUser.id ? 'text-primary-200' : 'text-slate-400'}`}>(edited)</span>}
+                                        {msg.edited && <span className={`text-xs ml-2 ${isMyMessage ? 'text-primary-200' : 'text-slate-400'}`}>(edited)</span>}
                                     </div>
                                 )}
                             </div>
-                            {msg.senderId !== currentUser.id && canDelete && (
+                            {!isMyMessage && (
                                 <div className="self-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={() => onTrashMessage(msg.id)} className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete message">
                                         <TrashIcon className="w-4 h-4" />

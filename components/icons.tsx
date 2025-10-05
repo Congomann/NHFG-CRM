@@ -28,12 +28,22 @@ export const MessageIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
     </svg>
 );
 
-export const CrmLogoIcon: React.FC<IconProps> = ({ className = 'w-8 h-8' }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" className={className} fill="none">
-        <rect width="52" height="52" rx="12" fill="#18181B"/>
-        <path d="M26 14L40 38H12L26 14Z" fill="white"/>
-    </svg>
-);
+export const CrmLogoIcon: React.FC<IconProps & { variant?: 'light' | 'dark' }> = ({ className = 'w-48', variant = 'light' }) => {
+    const textColor = variant === 'dark' ? '#FFFFFF' : '#0f172a';
+    const subTextColor = variant === 'dark' ? '#cbd5e1' : '#64748b'; // slate-300 for dark, slate-500 for light
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 52" className={className} fill="none" role="img" aria-label="New Holland Financial Group Logo">
+            <rect width="52" height="52" rx="12" fill="#0f172a"/>
+             <g fill="white" opacity="0.8">
+                <path d="M22 32L19 27L26 22L33 27L30 32H22Z" />
+                <path d="M26 22L19 27L22 32H26V22Z" />
+                <circle cx="26" cy="26" r="3" />
+            </g>
+            <text x="64" y="28" fontFamily="Inter, sans-serif" fontSize="24" fontWeight="bold" fill={textColor}>New Holland</text>
+            <text x="64" y="46" fontFamily="Inter, sans-serif" fontSize="12" fontWeight="500" fill={subTextColor} letterSpacing="0.05em">FINANCIAL GROUP</text>
+        </svg>
+    );
+};
 
 
 // FIX: Added missing icons to resolve import errors.

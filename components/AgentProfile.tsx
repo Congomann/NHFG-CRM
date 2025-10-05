@@ -204,7 +204,7 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
             {!isEmbedded && (
                 <header className="bg-white shadow-sm">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                        <div className="flex items-center"><CrmLogoIcon className="w-10 h-10" /><span className="text-xl font-bold text-slate-800 ml-3">New Holland Financial</span></div>
+                        <CrmLogoIcon className="w-48" variant="light" />
                         <a href={`tel:${agent.phone}`} className="hidden sm:flex items-center bg-primary-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-primary-700 transition-colors"><PhoneIcon className="w-5 h-5 mr-2" /> Call {agent.name.split(' ')[0]} Now</a>
                     </div>
                 </header>

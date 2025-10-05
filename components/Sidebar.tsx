@@ -83,13 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
   return (
     <div className="w-64 bg-slate-900 h-screen p-4 flex flex-col fixed shadow-2xl">
       <div className="flex items-center justify-between mb-10 px-2">
-        <div className="flex items-center">
-            <CrmLogoIcon className="w-10 h-10" />
-            <div className="ml-3">
-                <h1 className="text-xl font-bold text-white leading-tight">New Holland</h1>
-                <p className="text-xs text-slate-400 tracking-wider">FINANCIAL GROUP</p>
-            </div>
-        </div>
+        <CrmLogoIcon className="w-40" variant="dark" />
         <div className="relative">
             <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-slate-400 hover:text-white relative">
                 <BellIcon className="w-6 h-6" />

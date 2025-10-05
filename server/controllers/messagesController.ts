@@ -45,12 +45,26 @@ export const trashMessage = (currentUser: User, messageId: number) => {
     const isSender = message.senderId === currentUser.id;
     const isReceiver = message.receiverId === currentUser.id;
     const isAdmin = currentUser.role === UserRole.ADMIN;
-
+    
+    // Check general permission first
     if (!isSender && !isReceiver && !isAdmin) {
-        throw { status: 403, message: 'You are not authorized to delete this message.' };
+        throw { status: 403, message: 'You are not authorized to perform this action.' };
     }
 
-    // FIX: Explicitly provide the generic type to ensure type safety.
+    const messageTime = new Date(message.timestamp).getTime();
+    const currentTime = new Date().getTime();
+    const isRecent = (currentTime - messageTime) < 24 * 60 * 60 * 1000; // 24-hour window for "unsend"
+
+    // "Unsend" logic: If the sender deletes a recent message, it's deleted for everyone.
+    if (isSender && isRecent) {
+        const success = db.deleteRecord('messages', messageId);
+        if (!success) {
+            throw { status: 500, message: 'Failed to delete message.' };
+        }
+        return { success, action: 'deleted_for_everyone' };
+    }
+
+    // "Delete for me" logic for all other cases (receiver deletes, sender deletes old message, admin deletes)
     return db.updateRecord<Message>('messages', messageId, { 
         status: 'trashed', 
         deletedTimestamp: new Date().toISOString(),
