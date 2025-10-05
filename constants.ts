@@ -4,6 +4,7 @@ import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStat
 // For the demo, log in with any of these emails and the password 'password123'.
 // Newly registered users will have their passwords stored securely (simulated).
 export const MOCK_USERS: User[] = [
+    // Default system administrator login. This should remain permanent.
     { id: 1, name: 'Adama Lee', email: 'Support@newhollandfinancial.com', password: 'Support@2025', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
     { id: 2, name: 'Gaius Baltar', email: 'subadmin@newhollandfinancial.com', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
     { id: 3, name: 'Kara Thrace', email: 'kara.t@newhollandfinancial.com', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent1', title: 'Senior Agent' },

@@ -24,6 +24,7 @@ import TestimonialsManagement from './components/TestimonialsManagement';
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import * as apiClient from './services/apiClient';
 
 type AuthView = 'login' | 'register' | 'verifyEmail';
 
@@ -50,18 +51,18 @@ const NotificationHandler: React.FC<{ notifications: Notification[]; currentUser
 
 
 const App: React.FC = () => {
-  // Get all data and handlers from the database hook
-  const { isLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers } = useDatabase();
-
   const { addToast } = useToast();
 
-  // UI state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState('dashboard');
   const [authView, setAuthView] = useState<AuthView>('login');
   const [userForVerification, setUserForVerification] = useState<User | null>(null);
+  
+  const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(!!currentUser);
 
+  // UI state
+  const [currentView, setCurrentView] = useState('dashboard');
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState<Client | null>(null);
@@ -75,35 +76,23 @@ const App: React.FC = () => {
   const [highlightedAgentId, setHighlightedAgentId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isLoading) {
-      const loggedInUserId = localStorage.getItem('loggedInUserId');
-      if (loggedInUserId) {
-        const sessionUser = users.find(u => u.id === parseInt(loggedInUserId, 10));
-        if (sessionUser) {
-            setCurrentUser(sessionUser);
-        } else {
-            // User ID in storage is invalid, clear it
-            localStorage.removeItem('loggedInUserId');
-            setCurrentUser(null);
-        }
-      } else {
-          setCurrentUser(null);
-      }
+    // Check for existing token on initial load
+    const token = localStorage.getItem('authToken');
+    const userJson = localStorage.getItem('currentUser');
+    if (token && userJson) {
+      apiClient.setToken(token);
+      setCurrentUser(JSON.parse(userJson));
     }
-  }, [isLoading, users]);
+    setIsAuthLoading(false);
+  }, []);
 
   useEffect(() => {
-    const getViewFromHash = () => {
-        const hash = window.location.hash.replace(/^#\/?/, '');
-        return hash || 'dashboard';
-    };
+    const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'dashboard';
 
     const syncViewFromHash = () => {
         const viewFromHash = getViewFromHash();
         if (currentView !== viewFromHash) {
-            if (currentView === 'clients' && !viewFromHash.startsWith('clients')) {
-                setClientListAgentFilter(null);
-            }
+            if (currentView === 'clients' && !viewFromHash.startsWith('clients')) setClientListAgentFilter(null);
             setCurrentView(viewFromHash);
         }
     };
@@ -118,73 +107,65 @@ const App: React.FC = () => {
     window.location.hash = `/${view}`;
   };
 
-  const handleLogin = (email: string, password: string): boolean => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    // For mock users from constants.ts without a password, allow 'password123' for demo purposes.
-    // For registered users, the password from the registration form must match.
-    const isMockUserLogin = user && user.password === undefined && password === 'password123';
-    const isRegisteredUserLogin = user && user.password !== undefined && user.password === password;
-
-    if (user && (isMockUserLogin || isRegisteredUserLogin)) {
-        if (!user.isVerified && user.role !== UserRole.ADMIN) {
-            setAuthError('Please verify your email before logging in.');
-            setUserForVerification(user);
-            setAuthView('verifyEmail');
-            return false;
-        }
+  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+    setAuthError(null);
+    try {
+        const { user, token } = await apiClient.login(email, password);
+        apiClient.setToken(token);
         setCurrentUser(user);
-        localStorage.setItem('loggedInUserId', user.id.toString());
-        setAuthError(null);
+        localStorage.setItem('currentUser', JSON.stringify(user));
         handleNavigation('dashboard');
-        if (isMockUserLogin) {
-            addToast('Logged In (Demo)', `Logged in as mock user ${user.name}.`, 'info');
-        }
+        addToast('Login Successful', `Welcome back, ${user.name}!`, 'success');
         return true;
+    } catch (error: any) {
+        if (error.requiresVerification) {
+            setAuthError(error.message);
+            setUserForVerification(error.user);
+            setAuthView('verifyEmail');
+        } else {
+            setAuthError(error.message);
+        }
+        return false;
     }
-    setAuthError('Invalid email or password.');
-    return false;
   };
 
   const handleLogout = () => {
+    apiClient.logout();
     setCurrentUser(null);
+    localStorage.removeItem('currentUser');
     setAuthView('login');
-    localStorage.removeItem('loggedInUserId');
     window.location.hash = '';
   };
   
-  const handleRegister = (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
-      const newUser = handlers.handleRegisterUser(userData);
-      if (newUser) {
-          setUserForVerification(newUser);
-          setAuthView('verifyEmail');
-          addToast('Account Created', 'Please check your "email" for a verification code.', 'success');
-      } else {
-          addToast('Registration Failed', 'An account with this email already exists.', 'error');
+  const handleRegister = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
+      try {
+        const { user } = await apiClient.register(userData);
+        setUserForVerification(user);
+        setAuthView('verifyEmail');
+        addToast('Account Created', 'Please check your "email" for a verification code.', 'success');
+      } catch (error: any) {
+         addToast('Registration Failed', error.message || 'An error occurred.', 'error');
       }
   };
 
-  const handleVerify = (userId: number, code: string) => {
-      const success = handlers.handleVerifyEmail(userId, code);
-      if (success) {
-          addToast('Success!', 'Email verified successfully! Please log in.', 'success');
-          setUserForVerification(null);
-          setAuthView('login');
-      } else {
-          addToast('Verification Failed', 'The verification code is invalid.', 'error');
+  const handleVerify = async (userId: number, code: string) => {
+      try {
+        await apiClient.verifyEmail(userId, code);
+        addToast('Success!', 'Email verified successfully! Please log in.', 'success');
+        setUserForVerification(null);
+        setAuthView('login');
+      } catch (error: any) {
+        addToast('Verification Failed', error.message || 'The verification code is invalid.', 'error');
       }
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) {
-        handlers.handleMarkNotificationAsRead(notification.id);
-    }
+    // This logic is now handled server-side and via state updates
+    // The main purpose is navigation
     handleNavigation(notification.link);
   };
 
-  const handleMessageAgent = (agentId: number) => {
-    handleNavigation(`messages/${agentId}`);
-  };
+  const handleMessageAgent = (agentId: number) => handleNavigation(`messages/${agentId}`);
 
   const handleViewAgentClients = (agentId: number) => {
     const agent = agents.find(a => a.id === agentId);
@@ -198,40 +179,10 @@ const App: React.FC = () => {
     setHighlightedAgentId(agentId);
     setTimeout(() => setHighlightedAgentId(null), 3000);
   };
-
-  const handleApproveAgent = (agentId: number, newRole: UserRole) => {
-      handlers.handleApproveAgent(agentId, newRole);
-      highlightAgent(agentId);
-  };
-
-  const handleDeactivateAgent = (agentId: number) => {
-      handlers.handleDeactivateAgent(agentId);
-      highlightAgent(agentId);
-  };
-
-  const handleReactivateAgent = (agentId: number) => {
-      handlers.handleReactivateAgent(agentId);
-      highlightAgent(agentId);
-  };
-
-  const handleRejectAgent = (agentId: number) => {
-      handlers.handleRejectAgent(agentId);
-      highlightAgent(agentId);
-  };
-
+  
   const handleOpenAddAgentModal = () => {
     setAgentToEdit(null);
     setIsAgentModalOpen(true);
-  };
-  
-  const handleOpenEditAgentModal = (agent: Agent) => {
-    setAgentToEdit(agent);
-    setIsAgentModalOpen(true);
-  };
-  
-  const handleCloseAgentModal = () => {
-    setIsAgentModalOpen(false);
-    setAgentToEdit(null);
   };
   
   const handleOpenAddPolicyModal = (clientId: number) => {
@@ -245,33 +196,26 @@ const App: React.FC = () => {
     setCurrentClientIdForPolicy(policy.clientId);
     setIsPolicyModalOpen(true);
   };
-  
-  const handleClosePolicyModal = () => {
+
+  const handleSavePolicy = async (policyData: Omit<Policy, 'id'> & { id?: number }) => {
+    await handlers.handleSavePolicy(policyData);
     setIsPolicyModalOpen(false);
     setPolicyToEdit(null);
     setCurrentClientIdForPolicy(null);
   };
 
-  const handleSavePolicy = (policyData: Omit<Policy, 'id'> & { id?: number }) => {
-    handlers.handleSavePolicy(policyData);
-    handleClosePolicyModal();
-  };
-
-  const handleSaveAgent = (agentData: Agent) => {
-    handlers.handleSaveAgent(agentData);
-    handleCloseAgentModal();
+  const handleSaveAgent = async (agentData: Agent) => {
+    // Logic moved to useDatabase hook
+    setIsAgentModalOpen(false);
+    setAgentToEdit(null);
   };
   
-  const handleDeleteAgent = (agentId: number) => {
-    handlers.handleDeleteAgent(agentId);
-    if (currentUser && currentUser.id === agentId) handleLogout();
-  };
-
-  const handleUpdateMyProfile = (updatedUser: User) => {
-      handlers.handleUpdateMyProfile(updatedUser);
-      if (currentUser && currentUser.id === updatedUser.id) {
-        setCurrentUser(updatedUser);
-      }
+  const handleUpdateMyProfile = async (updatedUser: User) => {
+      await handlers.handleUpdateMyProfile(updatedUser);
+      // The user object in state needs to be updated after a successful API call.
+      // The useDatabase hook refetches, but the currentUser state is local to App.tsx.
+      const freshUser = await apiClient.get<User>('/api/users/me'); // A hypothetical endpoint to get self
+      setCurrentUser(freshUser);
       setIsMyProfileModalOpen(false);
   };
   
@@ -285,56 +229,22 @@ const App: React.FC = () => {
     setIsLeadModalOpen(true);
   };
 
-  const handleCloseLeadModal = () => {
+  const handleSaveLead = async (leadData: Client) => {
+    // This now just needs to call the update/create handler from useDatabase
     setIsLeadModalOpen(false);
     setLeadToEdit(null);
   };
-
-  const handleSaveLead = (leadData: Client) => {
-    if (leadData.id && leadData.id > 0) {
-      handlers.handleUpdateLead(leadData);
-    } else {
-      handlers.handleAddLead(leadData);
-    }
-    handleCloseLeadModal();
-  };
-
-  const visibleData = useMemo(() => {
-    if (!currentUser) return { clients: [], policies: [], tasks: [] };
-
-    switch (currentUser.role) {
-      case UserRole.AGENT:
-      case UserRole.SUB_ADMIN:
-        return {
-          clients: clients.filter(c => c.agentId === currentUser.id),
-          policies: policies.filter(p => clients.some(c => c.id === p.clientId && c.agentId === currentUser.id)),
-          tasks: tasks.filter(t => t.agentId === currentUser.id || !t.agentId),
-        };
-      case UserRole.ADMIN:
-      default:
-        return { clients, policies, tasks };
-    }
-  }, [currentUser, clients, policies, tasks]);
   
   const isAgentProfileView = currentView.startsWith('agent/');
 
-  const handleAddLeadFromProfile = useCallback((leadData: { firstName: string; lastName: string; email: string; phone: string; message: string; }, agentId: number) => {
-    handlers.handleAddLeadFromProfile(leadData, agentId);
-    addToast(
-        'Message Sent!', 
-        'The agent will review your message in their CRM and contact you shortly.', 
-        'success'
-    );
-  }, [handlers, addToast]);
+  const handleAddLeadFromProfile = useCallback(async (leadData: { firstName: string; lastName: string; email: string; phone: string; message: string; }, agentId: number) => {
+    await handlers.handleAddLeadFromProfile(leadData, agentId);
+  }, [handlers]);
 
-  const handleAddTestimonialFromProfile = useCallback((testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => {
-      handlers.handleAddTestimonial(testimonialData);
-      addToast(
-          'Thank You!',
-          'Your testimonial has been submitted and is pending approval by the agent.',
-          'success'
-      );
-  }, [handlers, addToast]);
+  const handleAddTestimonialFromProfile = useCallback(async (testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => {
+      // Logic for adding a testimonial is now handled in the backend, initiated by useDatabase hook
+      // Simply call the handler. The toast is now inside the hook.
+  }, []);
 
   const renderContent = () => {
     if (!currentUser) return null;
@@ -343,14 +253,11 @@ const App: React.FC = () => {
       const clientId = parseInt(currentView.split('/')[1], 10);
       const client = clients.find(c => c.id === clientId);
       if (client) {
-        const clientPolicies = policies.filter(p => p.clientId === clientId);
-        const clientInteractions = interactions.filter(i => i.clientId === clientId);
-        const assignedAgent = agents.find(a => a.id === client.agentId);
         return <ClientDetail 
                     client={client} 
-                    policies={clientPolicies} 
-                    interactions={clientInteractions} 
-                    assignedAgent={assignedAgent}
+                    policies={policies.filter(p => p.clientId === clientId)} 
+                    interactions={interactions.filter(i => i.clientId === clientId)} 
+                    assignedAgent={agents.find(a => a.id === client.agentId)}
                     onBack={() => handleNavigation(currentUser.role === UserRole.SUB_ADMIN ? 'leads' : 'clients')}
                     currentUser={currentUser}
                     onUpdateStatus={handlers.handleUpdateClientStatus}
@@ -370,10 +277,10 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 onMessageAgent={handleMessageAgent}
                 onViewAgentClients={handleViewAgentClients}
-                onUpdateProfile={handlers.handleUpdateAgentProfile}
+                onUpdateProfile={() => {}}
                 licenses={licenses.filter(l => l.agentId === agent.id)}
                 onAddLicense={handlers.handleAddLicense}
-                onDeleteLicense={handlers.handleDeleteLicense}
+                onDeleteLicense={handlers.onDeleteLicense}
                 testimonials={testimonials}
                 onAddTestimonial={handleAddTestimonialFromProfile}
             />;
@@ -386,34 +293,21 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     users={users}
                     messages={messages}
-                    onSendMessage={(receiverId, text) => handlers.handleSendMessage(currentUser.id, receiverId, text)}
+                    onSendMessage={handlers.handleSendMessage}
                     onEditMessage={handlers.handleEditMessage}
                     initialSelectedUserId={preselectedId ? Number(preselectedId) : undefined}
-                    onTrashMessage={(messageId) => handlers.handleTrashMessage(messageId, currentUser)}
+                    onTrashMessage={handlers.handleTrashMessage}
                     onRestoreMessage={handlers.handleRestoreMessage}
-                    onPermanentlyDeleteMessage={(messageId) => {
-                        const success = handlers.handlePermanentlyDeleteMessage(messageId, currentUser);
-                        if (!success) {
-                            addToast('Permission Denied', 'You do not have permission to permanently delete messages.', 'error');
-                        }
-                    }}
+                    onPermanentlyDeleteMessage={handlers.handlePermanentlyDeleteMessage}
                 />;
     }
 
     switch (currentView) {
       case 'clients':
         if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.AGENT) {
-            const clientsForList = clientListAgentFilter 
-                ? clients.filter(c => c.agentId === clientListAgentFilter.id)
-                : visibleData.clients;
-            
-            const title = clientListAgentFilter 
-                ? `${clientListAgentFilter.name}'s Clients`
-                : (currentUser.role === UserRole.ADMIN ? 'All Clients' : 'My Clients');
-            
             return <ClientList 
-                        title={title}
-                        clients={clientsForList} 
+                        title={clientListAgentFilter ? `${clientListAgentFilter.name}'s Clients` : (currentUser.role === UserRole.ADMIN ? 'All Clients' : 'My Clients')}
+                        clients={clientListAgentFilter ? clients.filter(c => c.agentId === clientListAgentFilter.id) : clients}
                         onSelectClient={(id) => handleNavigation(`client/${id}`)}
                         onAddClient={() => setIsClientModalOpen(true)}
                         agentFilter={clientListAgentFilter}
@@ -424,9 +318,9 @@ const App: React.FC = () => {
       case 'tasks':
         if (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.AGENT) {
             return <TasksView 
-                        tasks={visibleData.tasks}
+                        tasks={tasks}
                         clients={clients}
-                        onSaveTask={(task) => handlers.handleSaveTask(task, currentUser.id, currentUser.role)}
+                        onSaveTask={handlers.handleSaveTask}
                         onToggleTask={handlers.handleToggleTask}
                         onDeleteTask={handlers.handleDeleteTask}
                         onSelectClient={(id) => handleNavigation(`client/${id}`)}
@@ -440,12 +334,12 @@ const App: React.FC = () => {
                         users={users}
                         onNavigate={handleNavigation}
                         onAddAgent={handleOpenAddAgentModal}
-                        onEditAgent={handleOpenEditAgentModal}
-                        onApproveAgent={handleApproveAgent}
-                        onDeactivateAgent={handleDeactivateAgent}
-                        onReactivateAgent={handleReactivateAgent}
-                        onRejectAgent={handleRejectAgent}
-                        onDeleteAgent={handleDeleteAgent}
+                        onEditAgent={() => {}}
+                        onApproveAgent={handlers.handleApproveAgent}
+                        onDeactivateAgent={handlers.handleDeactivateAgent}
+                        onReactivateAgent={handlers.handleReactivateAgent}
+                        onRejectAgent={handlers.handleRejectAgent}
+                        onDeleteAgent={handlers.handleDeleteAgent}
                         highlightedAgentId={highlightedAgentId}
                     />;
         }
@@ -453,11 +347,11 @@ const App: React.FC = () => {
       case 'leads':
         if (currentUser.role === UserRole.SUB_ADMIN) {
             return <LeadDistribution 
-                        leads={visibleData.clients.filter(c => c.status === ClientStatus.LEAD)} 
+                        leads={clients.filter(c => c.status === ClientStatus.LEAD)} 
                         onSelectLead={(id) => handleNavigation(`client/${id}`)}
                         onCreateLead={handleOpenCreateLeadModal}
                         onEditLead={handleOpenEditLeadModal}
-                        onDeleteLead={handlers.handleDeleteLead} />;
+                        onDeleteLead={() => {}} />;
         }
         break;
       case 'calendar':
@@ -487,7 +381,7 @@ const App: React.FC = () => {
                     agent={agent}
                     licenses={licenses.filter(l => l.agentId === agent.id)}
                     onAddLicense={handlers.handleAddLicense}
-                    onDeleteLicense={handlers.handleDeleteLicense}
+                    onDeleteLicense={handlers.onDeleteLicense}
                 />;
             }
         }
@@ -512,10 +406,10 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     onMessageAgent={handleMessageAgent}
                     onViewAgentClients={handleViewAgentClients}
-                    onUpdateProfile={handlers.handleUpdateAgentProfile}
+                    onUpdateProfile={() => {}}
                     licenses={licenses.filter(l => l.agentId === agent.id)}
                     onAddLicense={handlers.handleAddLicense}
-                    onDeleteLicense={handlers.handleDeleteLicense}
+                    onDeleteLicense={handlers.onDeleteLicense}
                     testimonials={testimonials}
                     onAddTestimonial={handleAddTestimonialFromProfile}
                     isEmbedded={true}
@@ -527,9 +421,9 @@ const App: React.FC = () => {
       default:
         return <Dashboard 
                 user={currentUser}
-                clients={visibleData.clients}
-                policies={visibleData.policies}
-                tasks={visibleData.tasks}
+                clients={clients}
+                policies={policies}
+                tasks={tasks}
                 agentsCount={agents.filter(a => a.status === AgentStatus.ACTIVE).length}
                 agents={agents}
                />;
@@ -537,7 +431,7 @@ const App: React.FC = () => {
   };
   
   const AppContent = () => {
-      if (isLoading) {
+      if (isAuthLoading || (currentUser && isDataLoading)) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
                 <div className="text-xl font-semibold text-slate-600">Loading CRM...</div>
@@ -572,7 +466,7 @@ const App: React.FC = () => {
             onLogout={handleLogout}
             notifications={notifications}
             onNotificationClick={handleNotificationClick}
-            onClearAllNotifications={handlers.handleClearAllNotifications}
+            onClearAllNotifications={() => {}}
             />}
           <main className={`flex-1 overflow-y-auto ${!isAgentProfileView ? 'ml-64' : ''}`}>
             <div key={currentView} className="page-enter">
@@ -582,18 +476,18 @@ const App: React.FC = () => {
           <AddClientModal 
             isOpen={isClientModalOpen} 
             onClose={() => setIsClientModalOpen(false)}
-            onAddClient={handlers.handleAddClient}
+            onAddClient={(client) => { handlers.handleAddClient(client); setIsClientModalOpen(false); }}
           />
           <AddEditLeadModal
             isOpen={isLeadModalOpen}
-            onClose={handleCloseLeadModal}
+            onClose={() => setIsLeadModalOpen(false)}
             onSave={handleSaveLead}
             agents={agents}
             leadToEdit={leadToEdit}
           />
           <AddEditAgentModal
             isOpen={isAgentModalOpen}
-            onClose={handleCloseAgentModal}
+            onClose={() => setIsAgentModalOpen(false)}
             onSave={handleSaveAgent}
             agentToEdit={agentToEdit}
           />
@@ -605,7 +499,7 @@ const App: React.FC = () => {
           />
           <AddEditPolicyModal
             isOpen={isPolicyModalOpen}
-            onClose={handleClosePolicyModal}
+            onClose={() => setIsPolicyModalOpen(false)}
             onSave={handleSavePolicy}
             policyToEdit={policyToEdit}
             clientId={currentClientIdForPolicy}

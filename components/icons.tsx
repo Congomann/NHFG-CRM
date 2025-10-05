@@ -31,9 +31,7 @@ export const MessageIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
 export const CrmLogoIcon: React.FC<IconProps> = ({ className = 'w-8 h-8' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" className={className} fill="none">
         <rect width="52" height="52" rx="12" fill="#18181B"/>
-        <path d="M22 32L26 26L30 32H22Z" fill="#E4E4E7"/>
-        <path d="M26 20C27.1046 20 28 19.1046 28 18C28 16.8954 27.1046 16 26 16C24.8954 16 24 16.8954 24 18C24 19.1046 24.8954 20 26 20Z" fill="#E4E4E7"/>
-        <path opacity="0.4" d="M18 32L26 20L34 32H18Z" fill="#E4E4E7"/>
+        <path d="M26 14L40 38H12L26 14Z" fill="white"/>
     </svg>
 );
 

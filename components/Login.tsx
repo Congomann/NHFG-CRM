@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CrmLogoIcon } from './icons';
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => boolean;
+  onLogin: (email: string, password: string) => Promise<boolean>;
   error: string | null;
   onNavigateToRegister: () => void;
 }
@@ -12,14 +12,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onNavigateToRegister }) =
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate network delay
-    setTimeout(() => {
-      onLogin(email, password);
+    // onLogin now returns a promise that resolves to true/false
+    const success = await onLogin(email, password);
+    // Only stop loading if login failed, otherwise parent component will unmount this view
+    if (!success) {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (

@@ -4,8 +4,8 @@ import { CheckCircleIcon, TrashIcon, ChatBubbleLeftRightIcon } from './icons';
 
 interface TestimonialsManagementProps {
   testimonials: Testimonial[];
-  onUpdateTestimonialStatus: (testimonialId: number, status: TestimonialStatus) => void;
-  onDeleteTestimonial: (testimonialId: number) => void;
+  onUpdateTestimonialStatus: (testimonialId: number, status: TestimonialStatus) => Promise<any>;
+  onDeleteTestimonial: (testimonialId: number) => Promise<any>;
   onNavigate: (view: string) => void;
 }
 
@@ -59,9 +59,9 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
                 <p className="text-xs text-slate-500">Submitted: {testimonial.submissionDate}</p>
              </div>
              <div className="flex items-center space-x-2">
-                {isPending && (
+                {testimonial.status === TestimonialStatus.PENDING && (
                     <button 
-                        onClick={() => onUpdateTestimonialStatus(testimonial.id, TestimonialStatus.APPROVED)}
+                        onClick={async () => await onUpdateTestimonialStatus(testimonial.id, TestimonialStatus.APPROVED)}
                         className="flex items-center text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-md transition-colors button-press"
                         aria-label={`Approve testimonial from ${testimonial.author}`}
                     >
@@ -69,9 +69,9 @@ const TestimonialsManagement: React.FC<TestimonialsManagementProps> = ({ testimo
                     </button>
                 )}
                 <button 
-                    onClick={() => {
+                    onClick={async () => {
                         if (window.confirm('Are you sure you want to permanently delete this testimonial?')) {
-                            onDeleteTestimonial(testimonial.id);
+                            await onDeleteTestimonial(testimonial.id);
                         }
                     }}
                     className="flex items-center text-sm font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-md transition-colors button-press"

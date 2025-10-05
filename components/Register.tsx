@@ -3,7 +3,7 @@ import { CrmLogoIcon } from './icons';
 import { User, UserRole } from '../types';
 
 interface RegisterProps {
-  onRegister: (userData: Omit<User, 'id' | 'title' | 'avatar'>) => void;
+  onRegister: (userData: Omit<User, 'id' | 'title' | 'avatar'>) => Promise<void>;
   onNavigateToLogin: () => void;
 }
 
@@ -51,7 +51,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
 
   const isPasswordValid = Object.values(passwordValidity).every(Boolean);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPasswordValid) {
         setError("Password does not meet the requirements.");
@@ -64,10 +64,8 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     setError(null);
     setIsLoading(true);
     
-    setTimeout(() => {
-      onRegister({ name, email, password, role });
-      setIsLoading(false);
-    }, 500);
+    await onRegister({ name, email, password, role });
+    // Don't set loading to false, as the parent component will switch views
   };
 
   return (

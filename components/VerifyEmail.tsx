@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { User } from '../types';
+import { CrmLogoIcon } from './icons';
 
 interface VerifyEmailProps {
   user: User | null;
-  onVerify: (userId: number, code: string) => void;
+  onVerify: (userId: number, code: string) => Promise<void>;
   onNavigateToLogin: () => void;
 }
 
@@ -11,14 +12,14 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ user, onVerify, onNavigateToL
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user && code) {
       setIsLoading(true);
-      setTimeout(() => {
-        onVerify(user.id, code);
-        setIsLoading(false);
-      }, 500);
+      await onVerify(user.id, code);
+      // Don't set loading to false; parent will switch views on success,
+      // or show an error toast on failure. We'll reset it in case of failure.
+      setIsLoading(false);
     }
   };
 
@@ -36,6 +37,9 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ user, onVerify, onNavigateToL
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+            <CrmLogoIcon className="w-16 h-16" />
+        </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
           Verify your email address
         </h2>
@@ -73,9 +77,9 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ user, onVerify, onNavigateToL
                   type="text"
                   required
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter 6-digit code"
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 uppercase"
+                  placeholder="Enter 6-character code"
                 />
               </div>
             </div>
