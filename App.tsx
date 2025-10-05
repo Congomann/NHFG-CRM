@@ -21,6 +21,7 @@ import VerifyEmail from './components/VerifyEmail';
 import PendingApproval from './components/PendingApproval';
 import CalendarView from './components/CalendarView';
 import TestimonialsManagement from './components/TestimonialsManagement';
+import BroadcastModal from './components/BroadcastModal';
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -69,6 +70,7 @@ const App: React.FC = () => {
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [isMyProfileModalOpen, setIsMyProfileModalOpen] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [policyToEdit, setPolicyToEdit] = useState<Policy | null>(null);
   const [currentClientIdForPolicy, setCurrentClientIdForPolicy] = useState<number | null>(null);
   const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
@@ -246,6 +248,11 @@ const App: React.FC = () => {
       // Simply call the handler. The toast is now inside the hook.
   }, []);
 
+  const handleSendBroadcast = async (message: string) => {
+    await handlers.handleBroadcastMessage(message);
+    setIsBroadcastModalOpen(false);
+  };
+
   const renderContent = () => {
     if (!currentUser) return null;
 
@@ -299,6 +306,8 @@ const App: React.FC = () => {
                     onTrashMessage={handlers.handleTrashMessage}
                     onRestoreMessage={handlers.handleRestoreMessage}
                     onPermanentlyDeleteMessage={handlers.handlePermanentlyDeleteMessage}
+                    onMarkConversationAsRead={handlers.handleMarkConversationAsRead}
+                    onOpenBroadcast={() => setIsBroadcastModalOpen(true)}
                 />;
     }
 
@@ -503,6 +512,11 @@ const App: React.FC = () => {
             onSave={handleSavePolicy}
             policyToEdit={policyToEdit}
             clientId={currentClientIdForPolicy}
+          />
+          <BroadcastModal
+            isOpen={isBroadcastModalOpen}
+            onClose={() => setIsBroadcastModalOpen(false)}
+            onSend={handleSendBroadcast}
           />
           <NotificationHandler notifications={notifications} currentUser={currentUser} />
         </div>

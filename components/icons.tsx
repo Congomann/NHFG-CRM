@@ -338,3 +338,9 @@ export const ChatBubbleLeftRightIcon: React.FC<IconProps> = ({ className = 'w-6 
       <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72 3.72a1.125 1.125 0 01-1.59 0l-3.72-3.72a1.125 1.125 0 01-.566-1.003v-4.286c0-.97.616-1.813 1.5-2.097m0 0A9.025 9.025 0 0012 7.5a9.025 9.025 0 00-4.5 1.254m0 0A9.025 9.025 0 013.75 7.5a9.025 9.025 0 014.5-1.254m0 0A9.025 9.025 0 0112 3.75a9.025 9.025 0 014.5 1.254m0 0A9.025 9.025 0 0120.25 7.5a9.025 9.025 0 01-4.5-1.254" />
     </svg>
 );
+
+export const BroadcastIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84A2.34 2.34 0 0012.66 18H18a2 2 0 002-2v-4a2 2 0 00-2-2h-5.34a2.34 2.34 0 00-2.32 2.16V15.84zM6 9h.01M6 12h.01M6 15h.01" />
+    </svg>
+);

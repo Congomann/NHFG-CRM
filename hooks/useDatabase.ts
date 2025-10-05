@@ -26,26 +26,41 @@ export const useDatabase = (isLoggedIn: boolean) => {
     const [isLoading, setIsLoading] = useState(true);
     const { addToast } = useToast();
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isPolling = false) => {
         if (!isLoggedIn) {
-            setIsLoading(false);
+            if (!isPolling) setIsLoading(false);
             return;
         }
-        setIsLoading(true);
+        if (!isPolling) setIsLoading(true);
         try {
             const appData = await apiClient.get<AppData>('/api/data');
-            setData(appData);
+            setData(currentData => {
+                // Prevent unnecessary re-renders by comparing new data with current data.
+                // This stops the "blinking" UI effect caused by the polling interval.
+                if (JSON.stringify(currentData) === JSON.stringify(appData)) {
+                    return currentData;
+                }
+                return appData;
+            });
         } catch (error) {
-            console.error("Failed to fetch initial data", error);
-            addToast("Error", "Could not load CRM data.", "error");
+            console.error("Failed to fetch data", error);
+            if (!isPolling) addToast("Error", "Could not load CRM data.", "error");
         } finally {
-            setIsLoading(false);
+            if (!isPolling) setIsLoading(false);
         }
     }, [isLoggedIn, addToast]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (isLoggedIn) {
+            fetchData(false); // Initial fetch with loader
+
+            const intervalId = setInterval(() => {
+                fetchData(true); // Subsequent polling fetches without loader
+            }, 5000); // Poll every 5 seconds
+
+            return () => clearInterval(intervalId); // Cleanup on unmount
+        }
+    }, [isLoggedIn, fetchData]);
     
     // Generic wrapper for API calls that handles state updates and notifications
     const handleApiCall = async (
@@ -55,8 +70,10 @@ export const useDatabase = (isLoggedIn: boolean) => {
     ) => {
         try {
             await apiCall();
-            addToast(successTitle, successMessage, 'success');
-            await fetchData(); // Refetch all data to ensure UI is in sync
+            if (successTitle || successMessage) {
+                addToast(successTitle, successMessage, 'success');
+            }
+            await fetchData(true); // Refetch data without loader to ensure UI is in sync
         } catch (error: any) {
             addToast('Error', error.message || 'An unexpected error occurred.', 'error');
         }
@@ -125,7 +142,7 @@ export const useDatabase = (isLoggedIn: boolean) => {
         ),
         handleSendMessage: (receiverId: number, text: string) => handleApiCall(
             () => apiClient.sendMessage(receiverId, text),
-            'Message Sent', 'Your message has been sent successfully.'
+            '', '' // No toast for sending a message, it appears instantly
         ),
         handleEditMessage: (messageId: number, text: string) => handleApiCall(
             () => apiClient.editMessage(messageId, text),
@@ -142,6 +159,14 @@ export const useDatabase = (isLoggedIn: boolean) => {
         handlePermanentlyDeleteMessage: (messageId: number) => handleApiCall(
             () => apiClient.permanentlyDeleteMessage(messageId),
             'Message Deleted', 'The message has been permanently deleted.'
+        ),
+        handleBroadcastMessage: (text: string) => handleApiCall(
+            () => apiClient.broadcastMessage(text),
+            'Broadcast Sent', 'Your message has been sent to all active users.'
+        ),
+        handleMarkConversationAsRead: (senderId: number) => handleApiCall(
+            () => apiClient.markConversationAsRead(senderId),
+            '', '' // No toast for this action
         ),
 
         // Complex handlers that call specific apiClient methods

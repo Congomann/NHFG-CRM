@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { User, Message, UserRole } from '../types';
-import { PencilIcon, TrashIcon } from './icons';
+import { PencilIcon, TrashIcon, BroadcastIcon } from './icons';
 
 interface MessagingViewProps {
   currentUser: User;
@@ -12,9 +12,11 @@ interface MessagingViewProps {
   onRestoreMessage: (messageId: number) => void;
   onPermanentlyDeleteMessage: (messageId: number) => void;
   initialSelectedUserId?: number;
+  onMarkConversationAsRead: (senderId: number) => void;
+  onOpenBroadcast: () => void;
 }
 
-const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messages, onSendMessage, onEditMessage, onTrashMessage, onRestoreMessage, onPermanentlyDeleteMessage, initialSelectedUserId }) => {
+const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messages, onSendMessage, onEditMessage, onTrashMessage, onRestoreMessage, onPermanentlyDeleteMessage, initialSelectedUserId, onMarkConversationAsRead, onOpenBroadcast }) => {
   const [viewMode, setViewMode] = useState<'inbox' | 'trash'>('inbox');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(initialSelectedUserId || null);
   const [newMessage, setNewMessage] = useState('');
@@ -24,6 +26,13 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
 
   const otherUsers = users.filter(u => u.id !== currentUser.id);
   const userMap = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
+
+  // Mark conversation as read when opened
+  useEffect(() => {
+    if (selectedUserId) {
+        onMarkConversationAsRead(selectedUserId);
+    }
+  }, [selectedUserId, onMarkConversationAsRead, messages]); // Depend on messages to re-trigger when new ones arrive
 
   useEffect(() => {
     if (viewMode === 'inbox' && otherUsers.length > 0 && selectedUserId === null) {
@@ -73,6 +82,22 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
       .sort((a, b) => new Date(b.deletedTimestamp!).getTime() - new Date(a.deletedTimestamp!).getTime());
   }, [messages, currentUser]);
 
+  const conversationData = useMemo(() => {
+    const data: Record<string, { lastMessage: Message | null; unreadCount: number; }> = {};
+    otherUsers.forEach(user => {
+        const userMessages = messages
+            .filter(m => m.status === 'active' && ((m.senderId === user.id && m.receiverId === currentUser.id) || (m.senderId === currentUser.id && m.receiverId === user.id)))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        data[user.id] = {
+            lastMessage: userMessages[0] || null,
+            unreadCount: userMessages.filter(m => m.receiverId === currentUser.id && !m.isRead).length
+        };
+    });
+    return data;
+  }, [messages, currentUser.id, otherUsers]);
+
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() && selectedUserId) {
@@ -99,8 +124,17 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
   return (
     <div className="flex h-screen -my-16">
       <div className="w-1/3 border-r border-slate-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-slate-200">
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h1 className="text-2xl font-bold text-slate-800">Messages</h1>
+             {currentUser.role === UserRole.ADMIN && (
+                <button 
+                    onClick={onOpenBroadcast} 
+                    className="flex items-center text-sm font-semibold text-primary-600 hover:text-primary-800 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-md transition-colors"
+                    aria-label="Broadcast an announcement"
+                >
+                    <BroadcastIcon className="w-5 h-5 mr-2" /> Broadcast
+                </button>
+            )}
         </div>
         <div className="p-2">
             <h3 className="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Folders</h3>
@@ -113,19 +147,35 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
             <div className="p-2 pt-3">
                  <h3 className="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Users</h3>
             </div>
-          {otherUsers.map(user => (
+          {otherUsers.map(user => {
+              const data = conversationData[user.id];
+              const lastMessage = data?.lastMessage;
+              const unreadCount = data?.unreadCount || 0;
+            return (
             <div
               key={user.id}
               onClick={() => handleSelectUser(user.id)}
               className={`p-4 flex items-center cursor-pointer border-l-4 ${viewMode === 'inbox' && selectedUserId === user.id ? 'bg-primary-50 border-primary-600' : 'border-transparent hover:bg-slate-50'}`}
             >
               <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full mr-4" />
-              <div>
-                <p className="font-semibold text-slate-800">{user.name}</p>
-                <p className="text-sm text-slate-500">{user.title}</p>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex justify-between items-center">
+                    <p className={`font-semibold text-slate-800 ${unreadCount > 0 ? 'text-primary-700' : ''}`}>{user.name}</p>
+                    {unreadCount > 0 && (
+                        <span className="w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadCount}</span>
+                    )}
+                </div>
+                {lastMessage ? (
+                     <p className={`text-sm ${unreadCount > 0 ? 'text-slate-700 font-medium' : 'text-slate-500'} truncate`}>
+                        {lastMessage.senderId === currentUser.id && 'You: '}
+                        {lastMessage.text}
+                    </p>
+                ) : (
+                    <p className="text-sm text-slate-400 italic">No messages yet.</p>
+                )}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
       <div className="w-2/3 flex flex-col bg-slate-100">

@@ -179,6 +179,7 @@ export interface Message {
   source: 'internal' | 'public_profile';
   deletedTimestamp?: string;
   deletedBy?: number;
+  isRead: boolean;
 }
 
 export interface Notification {

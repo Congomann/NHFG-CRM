@@ -36,6 +36,13 @@ const handleProtectedRequest = (method: string, path: string, body: any, current
     }
     
     // Message business logic
+    if (path === '/api/messages/broadcast' && method === 'POST') {
+        return messagesController.broadcastMessage(currentUser, body);
+    }
+    if (path === '/api/messages/mark-as-read' && method === 'PUT') {
+        return messagesController.markConversationAsRead(currentUser, body);
+    }
+
     const messageActionMatch = path.match(/^\/api\/messages\/(\d+)\/(trash|restore)$/);
     if (messageActionMatch && method === 'PUT') {
         const [, messageId, action] = messageActionMatch;

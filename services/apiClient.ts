@@ -83,6 +83,14 @@ export const permanentlyDeleteMessage = (messageId: number) => {
     return del(`/api/messages/${messageId}`);
 };
 
+export const broadcastMessage = (text: string) => {
+    return post('/api/messages/broadcast', { text });
+};
+
+export const markConversationAsRead = (senderId: number) => {
+    return put('/api/messages/mark-as-read', { senderId });
+};
+
 
 // --- Specific Business Logic Methods ---
 export const approveAgent = async (agentId: number, role: UserRole) => {

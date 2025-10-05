@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { User, UserRole, Message } from '../../types';
+import { User, UserRole, Message, AgentStatus } from '../../types';
 
 export const sendMessage = (currentUser: User, { receiverId, text }: { receiverId: number, text: string }) => {
     const newMessage = db.createRecord('messages', {
@@ -9,6 +9,7 @@ export const sendMessage = (currentUser: User, { receiverId, text }: { receiverI
         timestamp: new Date().toISOString(),
         status: 'active',
         source: 'internal',
+        isRead: false,
     });
 
     // Create a notification for the receiver
@@ -97,4 +98,61 @@ export const permanentlyDeleteMessage = (currentUser: User, messageId: number) =
         throw { status: 404, message: 'Message not found for permanent deletion.' };
     }
     return { success };
+};
+
+export const broadcastMessage = (adminUser: User, { text }: { text: string }) => {
+    if (adminUser.role !== UserRole.ADMIN) {
+        throw { status: 403, message: 'Only administrators can broadcast messages.' };
+    }
+
+    const activeUsers = db.users.find().filter(
+        u => u.id !== adminUser.id && (u.role === UserRole.AGENT || u.role === UserRole.SUB_ADMIN)
+    );
+    const activeAgentIds = new Set(db.agents.find().filter(a => a.status === AgentStatus.ACTIVE).map(a => a.id));
+
+    const recipients = activeUsers.filter(u => activeAgentIds.has(u.id));
+
+    const createdMessages: Message[] = [];
+
+    recipients.forEach(recipient => {
+        const newMessage = db.createRecord('messages', {
+            senderId: adminUser.id,
+            receiverId: recipient.id,
+            text: text,
+            timestamp: new Date().toISOString(),
+            status: 'active',
+            source: 'internal',
+            isRead: false,
+        });
+
+        db.createRecord('notifications', {
+            userId: recipient.id,
+            message: `New broadcast message from ${adminUser.name}.`,
+            timestamp: new Date().toISOString(),
+            isRead: false,
+            link: `messages/${adminUser.id}`
+        });
+
+        createdMessages.push(newMessage as any);
+    });
+
+    return { success: true, count: createdMessages.length };
+};
+
+export const markConversationAsRead = (currentUser: User, { senderId }: { senderId: number }) => {
+    const allMessages = db.getAll('messages') as Message[];
+    let updatedCount = 0;
+    
+    allMessages.forEach(message => {
+        if (
+            message.receiverId === currentUser.id &&
+            message.senderId === senderId &&
+            !message.isRead
+        ) {
+            db.updateRecord<Message>('messages', message.id, { isRead: true });
+            updatedCount++;
+        }
+    });
+
+    return { success: true, updatedCount };
 };

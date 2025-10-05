@@ -186,13 +186,13 @@ export const MOCK_TASKS: Task[] = [
 ];
 
 export const MOCK_MESSAGES: Message[] = [
-    { id: 1, senderId: 1, receiverId: 3, text: 'Hey Kara, how are the new leads looking?', timestamp: '2024-06-17T10:00:00Z', status: 'active', source: 'internal' },
-    { id: 2, senderId: 3, receiverId: 1, text: 'Looking good! Alice Johnson seems very promising.', timestamp: '2024-06-17T10:05:00Z', status: 'active', source: 'internal' },
-    { id: 3, senderId: 1, receiverId: 3, text: 'Excellent. Keep me updated.', timestamp: '2024-06-17T10:06:00Z', status: 'active', source: 'internal' },
-    { id: 4, senderId: 3, receiverId: 1, text: 'Will do.', timestamp: '2024-06-17T10:06:30Z', status: 'active', source: 'internal' },
-    { id: 5, senderId: 2, receiverId: 1, text: 'I have a new high-priority lead to assign. Who is available?', timestamp: '2024-06-18T09:00:00Z', status: 'active', source: 'internal' },
-    { id: 6, senderId: 1, receiverId: 2, text: 'Kara Thrace has the most bandwidth right now.', timestamp: '2024-06-18T09:02:00Z', status: 'active', source: 'internal' },
-    { id: 7, senderId: 4, receiverId: 3, text: 'Can you help me with the paperwork for the Smith policy?', timestamp: '2024-06-18T14:00:00Z', status: 'active', source: 'internal' },
+    { id: 1, senderId: 1, receiverId: 3, text: 'Hey Kara, how are the new leads looking?', timestamp: '2024-06-17T10:00:00Z', status: 'active', source: 'internal', isRead: true },
+    { id: 2, senderId: 3, receiverId: 1, text: 'Looking good! Alice Johnson seems very promising.', timestamp: '2024-06-17T10:05:00Z', status: 'active', source: 'internal', isRead: true },
+    { id: 3, senderId: 1, receiverId: 3, text: 'Excellent. Keep me updated.', timestamp: '2024-06-17T10:06:00Z', status: 'active', source: 'internal', isRead: true },
+    { id: 4, senderId: 3, receiverId: 1, text: 'Will do.', timestamp: '2024-06-17T10:06:30Z', status: 'active', source: 'internal', isRead: true },
+    { id: 5, senderId: 2, receiverId: 1, text: 'I have a new high-priority lead to assign. Who is available?', timestamp: '2024-06-18T09:00:00Z', status: 'active', source: 'internal', isRead: true },
+    { id: 6, senderId: 1, receiverId: 2, text: 'Kara Thrace has the most bandwidth right now.', timestamp: '2024-06-18T09:02:00Z', status: 'active', source: 'internal', isRead: true },
+    { id: 7, senderId: 4, receiverId: 3, text: 'Can you help me with the paperwork for the Smith policy?', timestamp: '2024-06-18T14:00:00Z', status: 'active', source: 'internal', isRead: true },
 ];
 
 export const NOTE_COLORS: { name: string; bg: string; text: string; ring: string; }[] = [
