@@ -1,18 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, SafariLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, GlobeAltIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon } from './icons';
 import { User, UserRole, Notification } from '../types';
 
 interface SidebarProps {
   currentView: string;
   onNavigate: (view: string) => void;
   currentUser: User;
-  allUsers: User[];
-  onSwitchUser: (user: User) => void;
   onEditMyProfile: () => void;
   onLogout: () => void;
   notifications: Notification[];
   onNotificationClick: (notification: Notification) => void;
   onClearAllNotifications: (userId: number) => void;
+  onSwitchUser: (role: UserRole) => void;
 }
 
 const navConfig = {
@@ -21,27 +20,31 @@ const navConfig = {
     { id: 'clients', label: 'Clients', icon: <ClientsIcon /> },
     { id: 'agents', label: 'Agents', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.SUB_ADMIN]: [
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },
     { id: 'leads', label: 'Lead Distribution', icon: <ClientsIcon /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.AGENT]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { id: 'clients', label: 'My Clients', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'My Tasks', icon: <TasksIcon /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+    { id: 'testimonials', label: 'Testimonials', icon: <ChatBubbleLeftRightIcon /> },
     { id: 'licenses', label: 'Licenses', icon: <ShieldIcon /> },
     { id: 'my-profile', label: 'My Public Profile', icon: <UserCircleIcon /> },
   ],
 };
 
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, allUsers, onSwitchUser, onEditMyProfile, onLogout, notifications, onNotificationClick, onClearAllNotifications }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, onLogout, notifications, onNotificationClick, onClearAllNotifications, onSwitchUser }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const navItems = navConfig[currentUser.role];
@@ -49,11 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
   const baseClasses = 'flex items-center px-3 py-2.5 text-sm font-medium rounded-md';
   const activeClasses = 'bg-primary-600 text-white shadow-sm';
   const inactiveClasses = 'text-slate-400 hover:bg-slate-800 hover:text-white';
-
-  const handleUserSelect = (user: User) => {
-    onSwitchUser(user);
-    setIsDropdownOpen(false);
-  }
   
   const userNotifications = useMemo(() => {
     return notifications
@@ -83,12 +81,51 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
     return "Just now";
   }
 
+  const DemoViewSwitcher = () => {
+    const getButtonClasses = (role: UserRole) => {
+      const base = "w-full text-left flex items-center px-3 py-2 text-sm font-medium rounded-md button-press ";
+      if (currentUser.role === role) {
+          return base + "bg-slate-800 text-white font-semibold";
+      }
+      return base + "text-slate-400 hover:bg-slate-800 hover:text-white";
+    };
+
+    return (
+      <div className="mt-8 px-2 py-4 border-t border-slate-700">
+        <h3 className="px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center">
+          <EyeIcon className="w-4 h-4 mr-2" />
+          Demo View Switcher
+        </h3>
+        <ul className="space-y-1">
+          <li>
+            <button onClick={() => onSwitchUser(UserRole.ADMIN)} className={getButtonClasses(UserRole.ADMIN)}>
+              Switch to Admin
+            </button>
+          </li>
+          <li>
+            <button onClick={() => onSwitchUser(UserRole.SUB_ADMIN)} className={getButtonClasses(UserRole.SUB_ADMIN)}>
+              Switch to Sub-Admin
+            </button>
+          </li>
+          <li>
+            <button onClick={() => onSwitchUser(UserRole.AGENT)} className={getButtonClasses(UserRole.AGENT)}>
+              Switch to Agent
+            </button>
+          </li>
+        </ul>
+      </div>
+    );
+  };
+
   return (
     <div className="w-64 bg-slate-900 h-screen p-4 flex flex-col fixed shadow-2xl">
       <div className="flex items-center justify-between mb-10 px-2">
         <div className="flex items-center">
-            <SafariLogoIcon className="w-10 h-10 text-white" />
-            <h1 className="text-xl font-bold text-white ml-3">Safari Life</h1>
+            <CrmLogoIcon className="w-10 h-10" />
+            <div className="ml-3">
+                <h1 className="text-xl font-bold text-white leading-tight">New Holland</h1>
+                <p className="text-xs text-slate-400 tracking-wider">FINANCIAL GROUP</p>
+            </div>
         </div>
         <div className="relative">
             <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-slate-400 hover:text-white relative">
@@ -130,6 +167,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
           ))}
         </ul>
       </nav>
+      
+      <DemoViewSwitcher />
+
       <div className="mt-auto relative">
         <div className="p-2 rounded-lg hover:bg-slate-800 cursor-pointer" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <div className="flex items-center">
@@ -151,14 +191,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                     <UserCircleIcon className="w-4 h-4 mr-3 text-slate-400" />
                     <span>Logout</span>
                 </a>
-                <div className="border-t my-1 mx-2 border-slate-700"></div>
-                <p className="px-3 pt-2 pb-1 text-xs text-slate-500 font-semibold uppercase">Switch Portal View</p>
-                {allUsers.map(user => (
-                    <a key={user.id} href="#" onClick={(e) => { e.preventDefault(); handleUserSelect(user)}} className="flex items-center px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
-                        <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full mr-3" />
-                        <span>{user.name} ({user.role})</span>
-                    </a>
-                ))}
             </div>
         )}
       </div>

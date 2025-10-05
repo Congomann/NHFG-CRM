@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
 import * as db from '../services/db';
-import { User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification } from '../types';
+import { User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus } from '../types';
 
 const usePersistentState = <T extends {id: number}>(
   storageGetter: () => T[],
@@ -37,9 +37,64 @@ export const useDatabase = () => {
     const [messages, setMessages, messagesLoading] = usePersistentState<Message>(db.getMessages, db.saveMessages);
     const [licenses, setLicenses, licensesLoading] = usePersistentState<License>(db.getLicenses, db.saveLicenses);
     const [notifications, setNotifications, notificationsLoading] = usePersistentState<Notification>(db.getNotifications, db.saveNotifications);
-  
-    const isLoading = usersLoading || agentsLoading || clientsLoading || policiesLoading || interactionsLoading || tasksLoading || messagesLoading || licensesLoading || notificationsLoading;
+    const [calendarNotes, setCalendarNotes, calendarNotesLoading] = usePersistentState<CalendarNote>(db.getCalendarNotes, db.saveCalendarNotes);
+    const [testimonials, setTestimonials, testimonialsLoading] = usePersistentState<Testimonial>(db.getTestimonials, db.saveTestimonials);
+
+    const isLoading = usersLoading || agentsLoading || clientsLoading || policiesLoading || interactionsLoading || tasksLoading || messagesLoading || licensesLoading || notificationsLoading || calendarNotesLoading || testimonialsLoading;
     
+    const handleRegisterUser = useCallback((userData: Omit<User, 'id' | 'title' | 'avatar'>): User | null => {
+      let newUser: User | null = null;
+      setUsers(prev => {
+        if (prev.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+          alert('An account with this email already exists.');
+          return prev;
+        }
+        const allIds = [...prev.map(u => u.id), ...agents.map(a => a.id)];
+        const newId = Math.max(0, ...allIds) + 1;
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        newUser = {
+          ...userData,
+          id: newId,
+          title: userData.role === UserRole.AGENT ? 'Agent Applicant' : 'Sub-Admin Applicant',
+          avatar: `https://i.pravatar.cc/150?u=${newId}`,
+          isVerified: false,
+          verificationCode,
+        };
+        return [...prev, newUser];
+      });
+
+      if (newUser) {
+        setAgents(prev => {
+          const newAgent: Agent = {
+            id: newUser!.id,
+            name: newUser!.name,
+            email: newUser!.email,
+            status: AgentStatus.PENDING,
+            slug: newUser!.name.toLowerCase().replace(/\s+/g, '-'),
+            leads: 0, clientCount: 0, conversionRate: 0, commissionRate: 0.75,
+            location: '', phone: '', languages: [], bio: '', calendarLink: '',
+            avatar: newUser!.avatar, joinDate: '', socials: {},
+          };
+          return [...prev, newAgent];
+        });
+      }
+      return newUser;
+    }, [setUsers, setAgents, agents]);
+
+    const handleVerifyEmail = useCallback((userId: number, code: string): boolean => {
+      let success = false;
+      setUsers(prev => {
+        const userToVerify = prev.find(u => u.id === userId);
+        if (userToVerify && userToVerify.verificationCode === code) {
+          success = true;
+          return prev.map(u => u.id === userId ? { ...u, isVerified: true, verificationCode: undefined } : u);
+        }
+        return prev;
+      });
+      return success;
+    }, [setUsers]);
+
     const handleAddClient = useCallback((newClientData: Omit<Client, 'id'>) => {
       setClients(prev => {
         const newId = prev.length > 0 ? Math.max(...prev.map(c => c.id)) + 1 : 1;
@@ -229,82 +284,37 @@ export const useDatabase = () => {
         if (isUpdating) { // Editing an existing agent
           setUsers(prevUsers => prevUsers.map(u => u.id === agentData.id ? { ...u, name: agentData.name, avatar: agentData.avatar } : u));
           return prevAgents.map(a => a.id === agentData.id ? agentData : a);
-        } else { // Adding a new agent application
-          const allIds = [...prevAgents.map(a => a.id), ...users.map(u => u.id)];
-          const maxId = Math.max(0, ...allIds);
-          const newId = maxId + 1;
-          const newAgent: Agent = {
-              ...agentData,
-              id: newId,
-              status: AgentStatus.PENDING,
-              joinDate: '',
-              slug: agentData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-          };
-          return [...prevAgents, newAgent];
+        } else { // Adding a new agent application (This path should not be taken with the new register flow)
+          console.warn("handleSaveAgent called for a new agent. This should be handled by handleRegisterUser.");
+          return prevAgents;
         }
       });
-    }, [setAgents, setUsers, users]);
+    }, [setAgents, setUsers]);
 
-    const handleApproveAgent = useCallback((agentId: number) => {
-        let agentToApprove: Agent | undefined;
-
-        setAgents(prev => {
-            const updatedAgents = prev.map(a => {
-                if (a.id === agentId) {
-                    agentToApprove = { ...a, status: AgentStatus.ACTIVE, joinDate: new Date().toISOString().split('T')[0] };
-                    return agentToApprove;
-                }
-                return a;
-            });
-            return updatedAgents;
-        });
-
-        setUsers(prevUsers => {
-            if (agentToApprove && !prevUsers.some(u => u.id === agentId)) {
-                const newUser: User = {
-                    id: agentToApprove.id,
-                    name: agentToApprove.name,
-                    email: agentToApprove.email,
-                    role: UserRole.AGENT,
-                    avatar: agentToApprove.avatar,
-                    title: 'Insurance Agent',
-                    password: 'password123'
+    const handleApproveAgent = useCallback((agentId: number, newRole: UserRole) => {
+        setAgents(prev => prev.map(a => 
+            a.id === agentId ? { ...a, status: AgentStatus.ACTIVE, joinDate: new Date().toISOString().split('T')[0] } : a
+        ));
+        setUsers(prev => prev.map(u => {
+            if (u.id === agentId) {
+                return {
+                    ...u,
+                    role: newRole, // Update the role
+                    title: newRole === UserRole.AGENT ? 'Insurance Agent' : 'Lead Manager' // Update title based on new role
                 };
-                return [...prevUsers, newUser];
             }
-            return prevUsers;
-        });
+            return u;
+        }));
     }, [setAgents, setUsers]);
     
     const handleDeactivateAgent = useCallback((agentId: number) => {
         setAgents(prev => prev.map(a => a.id === agentId ? { ...a, status: AgentStatus.INACTIVE } : a));
-        setUsers(prev => prev.filter(u => u.id !== agentId));
-        setClients(prev => prev.map(c => c.agentId === agentId ? { ...c, agentId: undefined } : c));
-    }, [setAgents, setUsers, setClients]);
+        // We keep the user record so the admin can reactivate them, but a login check should prevent access.
+    }, [setAgents]);
 
     const handleReactivateAgent = useCallback((agentId: number) => {
-        let agentToReactivate: Agent | undefined;
-        setAgents(prev => {
-            const updatedAgents = prev.map(a => {
-                if (a.id === agentId) {
-                    agentToReactivate = { ...a, status: AgentStatus.ACTIVE };
-                    return agentToReactivate;
-                }
-                return a;
-            });
-            return updatedAgents;
-        });
-        
-        setUsers(prev => {
-            if (agentToReactivate && !prev.some(u => u.id === agentId)) {
-                 const newUser: User = {
-                    id: agentToReactivate.id, name: agentToReactivate.name, email: agentToReactivate.email, role: UserRole.AGENT, avatar: agentToReactivate.avatar, title: 'Insurance Agent', password: 'password123'
-                };
-                return [...prev, newUser];
-            }
-            return prev;
-        });
-    }, [setAgents, setUsers]);
+        setAgents(prev => prev.map(a => a.id === agentId ? { ...a, status: AgentStatus.ACTIVE } : a));
+    }, [setAgents]);
 
     const handleDeleteAgent = useCallback((agentId: number) => {
         setAgents(prev => prev.filter(a => a.id !== agentId));
@@ -323,31 +333,80 @@ export const useDatabase = () => {
     const handleUpdateMyProfile = useCallback((updatedUser: User) => {
         setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
         
-        if (updatedUser.role === UserRole.AGENT) {
+        if (updatedUser.role === UserRole.AGENT || updatedUser.role === UserRole.SUB_ADMIN) {
             setAgents(prevAgents => prevAgents.map(a => a.id === updatedUser.id ? { ...a, name: updatedUser.name, avatar: updatedUser.avatar } : a));
         }
     }, [setUsers, setAgents]);
     
     const handleAddLeadFromProfile = useCallback((leadData: { firstName: string; lastName: string; email: string; phone: string; message: string; }, agentId: number) => {
-        let newLeadId: number = 0;
-        setClients(prevClients => {
-            const newId = prevClients.length > 0 ? Math.max(...prevClients.map(c => c.id)) + 1 : 1;
-            newLeadId = newId;
-            const newLead: Client = {
-                id: newId, firstName: leadData.firstName, lastName: leadData.lastName, email: leadData.email, phone: leadData.phone, address: 'From Agent Profile Contact', status: ClientStatus.LEAD, joinDate: new Date().toISOString().split('T')[0], agentId: agentId,
+        const allUserIds = users.map(u => u.id);
+        const allClientIds = clients.map(c => c.id);
+        const newId = Math.max(0, ...allUserIds, ...allClientIds) + 1;
+        const newLeadFullName = `${leadData.firstName} ${leadData.lastName}`;
+
+        // 1. Create a new User object for the lead to enable messaging
+        const newUserForLead: User = {
+            id: newId,
+            name: newLeadFullName,
+            email: leadData.email,
+            password: '', // Cannot log in
+            role: UserRole.AGENT, // Use existing role to avoid UI changes. Title identifies them.
+            avatar: `https://i.pravatar.cc/150?u=lead${newId}`,
+            title: 'Customer',
+            isVerified: true, // Mark as verified to simplify logic
+        };
+        setUsers(prev => [...prev, newUserForLead]);
+        
+        // 2. Create the new Client object for lead tracking
+        const newClient: Client = {
+            id: newId,
+            firstName: leadData.firstName,
+            lastName: leadData.lastName,
+            email: leadData.email,
+            phone: leadData.phone,
+            address: 'From Agent Profile Contact',
+            status: ClientStatus.LEAD,
+            joinDate: new Date().toISOString().split('T')[0],
+            agentId: agentId,
+        };
+        setClients(prev => [...prev, newClient]);
+
+        // 3. Create the message from the lead to the agent in the CRM
+        const messageText = `A new inquiry has been submitted through your public profile.\n\n--- Lead Details ---\nName: ${leadData.firstName} ${leadData.lastName}\nEmail: ${leadData.email}\nPhone: ${leadData.phone}\n------------------\n\nMessage:\n${leadData.message}`;
+        setMessages(prev => {
+            const newMsgId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
+            const newMessage: Message = {
+                id: newMsgId,
+                senderId: newId, // The new user/lead ID
+                receiverId: agentId,
+                text: messageText,
+                timestamp: new Date().toISOString(),
             };
-            return [...prevClients, newLead];
+            return [...prev, newMessage];
+        });
+
+        // 4. Create a notification for the agent
+        setNotifications(prev => {
+            const newNotificationId = prev.length > 0 ? Math.max(...prev.map(n => n.id)) + 1 : 1;
+            const newNotification: Notification = {
+                id: newNotificationId,
+                userId: agentId,
+                message: `You have a new message from ${newLeadFullName}.`,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                link: `messages/${newId}` // Link to the conversation with the new lead
+            };
+            return [...prev, newNotification];
         });
         
-        setInteractions(prevInteractions => {
-            const newId = prevInteractions.length > 0 ? Math.max(...prevInteractions.map(i => i.id)) + 1 : 1;
-            const newInteraction: Interaction = {
-                id: newId, clientId: newLeadId, type: InteractionType.NOTE, date: new Date().toISOString().split('T')[0], summary: `Lead from agent profile contact form: "${leadData.message}"`,
-            };
-            return [...prevInteractions, newInteraction];
-        });
-        alert('Your message has been sent. The agent will contact you shortly.');
-    }, [setClients, setInteractions]);
+        // 5. Update the agent's lead count
+        setAgents(prev => prev.map(agent => {
+            if (agent.id === agentId) {
+                return { ...agent, leads: agent.leads + 1 };
+            }
+            return agent;
+        }));
+    }, [users, clients, setUsers, setClients, setMessages, setAgents, setNotifications]);
 
     const handleUpdatePolicy = useCallback((policyId: number, updates: Partial<Omit<Policy, 'id'>>) => {
       setPolicies(prevPolicies => 
@@ -376,9 +435,62 @@ export const useDatabase = () => {
         setNotifications(prev => prev.map(n => n.userId === userId ? { ...n, isRead: true } : n));
     }, [setNotifications]);
 
+    const handleSaveCalendarNote = useCallback((noteData: Omit<CalendarNote, 'id'> & { id?: number }) => {
+        setCalendarNotes(prev => {
+            if (noteData.id) { // Editing existing note
+                return prev.map(note => note.id === noteData.id ? { ...note, ...noteData } as CalendarNote : note);
+            } else { // Adding new note
+                const newId = prev.length > 0 ? Math.max(...prev.map(n => n.id)) + 1 : 1;
+                const newNote: CalendarNote = { ...noteData, id: newId };
+                return [...prev, newNote];
+            }
+        });
+    }, [setCalendarNotes]);
+
+    const handleDeleteCalendarNote = useCallback((noteId: number) => {
+        setCalendarNotes(prev => prev.filter(note => note.id !== noteId));
+    }, [setCalendarNotes]);
+
+    const handleAddTestimonial = useCallback((testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => {
+        setTestimonials(prev => {
+            const newId = prev.length > 0 ? Math.max(...prev.map(t => t.id)) + 1 : 1;
+            const newTestimonial: Testimonial = {
+                ...testimonialData,
+                id: newId,
+                status: TestimonialStatus.PENDING,
+                submissionDate: new Date().toISOString().split('T')[0],
+            };
+    
+            // Create notification for the agent
+            setNotifications(prevNotifications => {
+                const newNotificationId = prevNotifications.length > 0 ? Math.max(...prevNotifications.map(n => n.id)) + 1 : 1;
+                const notification: Notification = {
+                    id: newNotificationId,
+                    userId: testimonialData.agentId,
+                    message: `You have a new testimonial from ${testimonialData.author} awaiting your approval.`,
+                    timestamp: new Date().toISOString(),
+                    isRead: false,
+                    link: 'testimonials' // Navigate to the new management view
+                };
+                return [...prevNotifications, notification];
+            });
+    
+            return [...prev, newTestimonial];
+        });
+    }, [setTestimonials, setNotifications]);
+
+    const handleUpdateTestimonialStatus = useCallback((testimonialId: number, status: TestimonialStatus) => {
+        setTestimonials(prev => prev.map(t => t.id === testimonialId ? { ...t, status } : t));
+    }, [setTestimonials]);
+
+    const handleDeleteTestimonial = useCallback((testimonialId: number) => {
+        setTestimonials(prev => prev.filter(t => t.id !== testimonialId));
+    }, [setTestimonials]);
+
     return {
-        isLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications,
+        isLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials,
         handlers: {
+            handleRegisterUser, handleVerifyEmail,
             handleAddClient, handleAddLead, handleUpdateLead, handleDeleteLead, handleSendMessage, handleEditMessage, handleSaveTask, handleToggleTask,
             handleUpdateClientStatus, handleUpdateAgentProfile, handleSavePolicy, handleSaveAgent, handleUpdateMyProfile,
             handleAddLeadFromProfile, handleUpdatePolicy,
@@ -386,6 +498,8 @@ export const useDatabase = () => {
             handleDeactivateAgent, handleReactivateAgent, handleRejectAgent,
             handleAddLicense, handleDeleteLicense,
             handleMarkNotificationAsRead, handleClearAllNotifications,
+            handleSaveCalendarNote, handleDeleteCalendarNote,
+            handleAddTestimonial, handleUpdateTestimonialStatus, handleDeleteTestimonial,
         }
     };
 };

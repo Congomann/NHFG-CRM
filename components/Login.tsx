@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { SafariLogoIcon } from './icons';
+import { CrmLogoIcon } from './icons';
 
 interface LoginProps {
   onLogin: (email: string, password: string) => boolean;
   error: string | null;
+  onNavigateToRegister: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, error, onNavigateToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,28 +21,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
       setIsLoading(false);
     }, 500);
   };
-  
-  const handleDemoLogin = (demoEmail: string, demoPass: string) => {
-      setEmail(demoEmail);
-      setPassword(demoPass);
-      setIsLoading(true);
-      setTimeout(() => {
-        onLogin(demoEmail, demoPass);
-        setIsLoading(false);
-      }, 500);
-  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-            <SafariLogoIcon className="w-16 h-16 text-primary-600" />
+            <CrmLogoIcon className="w-16 h-16" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
           Sign in to your account
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-            Safari Life Group CRM
+            New Holland Financial Group CRM
         </p>
       </div>
 
@@ -101,26 +92,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
             </div>
           </form>
           
-          <div className="mt-6">
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-slate-500">Or use a demo account</span>
-                </div>
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-3">
-                 <button onClick={() => handleDemoLogin('admin@safarilife.com', 'password123')} className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-500 hover:bg-slate-50">
-                    Sign in as Admin
-                 </button>
-                  <button onClick={() => handleDemoLogin('subadmin@safarilife.com', 'password123')} className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-500 hover:bg-slate-50">
-                    Sign in as Sub-Admin
-                 </button>
-                 <button onClick={() => handleDemoLogin('kara.t@safarilife.com', 'password123')} className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-500 hover:bg-slate-50">
-                    Sign in as Agent
-                 </button>
-            </div>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+                Don't have an account?{' '}
+                <button onClick={onNavigateToRegister} className="font-medium text-primary-600 hover:text-primary-500">
+                    Sign up
+                </button>
+            </p>
           </div>
         </div>
       </div>

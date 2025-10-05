@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Agent, AgentStatus } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Agent, AgentStatus, User, UserRole } from '../types';
 import { PlusIcon, PencilIcon } from './icons';
+import ApproveAgentModal from './ApproveAgentModal';
 
 interface AgentManagementProps {
   agents: Agent[];
+  users: User[];
   onNavigate: (view: string) => void;
   onAddAgent: () => void;
   onEditAgent: (agent: Agent) => void;
-  onApproveAgent: (agentId: number) => void;
+  onApproveAgent: (agentId: number, newRole: UserRole) => void;
   onDeactivateAgent: (agentId: number) => void;
   onReactivateAgent: (agentId: number) => void;
   onRejectAgent: (agentId: number) => void;
@@ -15,13 +17,33 @@ interface AgentManagementProps {
   highlightedAgentId: number | null;
 }
 
-const AgentManagement: React.FC<AgentManagementProps> = ({ agents, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
+const AgentManagement: React.FC<AgentManagementProps> = ({ agents, users, onNavigate, onAddAgent, onEditAgent, onApproveAgent, onDeactivateAgent, onReactivateAgent, onRejectAgent, onDeleteAgent, highlightedAgentId }) => {
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'inactive'>('active');
+  const [agentToApprove, setAgentToApprove] = useState<Agent | null>(null);
 
-  const activeAgents = agents.filter(a => a.status === AgentStatus.ACTIVE);
-  const pendingAgents = agents.filter(a => a.status === AgentStatus.PENDING);
-  const inactiveAgents = agents.filter(a => a.status === AgentStatus.INACTIVE);
+  // Group agents by status in a single pass for efficiency and clarity.
+  const { activeAgents, pendingAgents, inactiveAgents } = useMemo(() => {
+    const grouped = {
+      [AgentStatus.ACTIVE]: [] as Agent[],
+      [AgentStatus.PENDING]: [] as Agent[],
+      [AgentStatus.INACTIVE]: [] as Agent[],
+    };
+
+    agents.forEach(agent => {
+      if (grouped[agent.status]) {
+          grouped[agent.status].push(agent);
+      }
+    });
+
+    return {
+      activeAgents: grouped[AgentStatus.ACTIVE],
+      pendingAgents: grouped[AgentStatus.PENDING],
+      inactiveAgents: grouped[AgentStatus.INACTIVE],
+    };
+  }, [agents]);
   
+  const userForApproval = users.find(u => u.id === agentToApprove?.id);
+
   const TabButton: React.FC<{tabId: 'active' | 'pending' | 'inactive', label: string, count: number}> = ({ tabId, label, count }) => (
     <button
       onClick={() => setActiveTab(tabId)}
@@ -181,12 +203,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents, onNavigate, o
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-4">
                         <ActionButton
-                            onClick={() => {
-                                if (window.confirm('Approve this agent’s application and activate their account?')) {
-                                    onApproveAgent(agent.id);
-                                    setActiveTab('active');
-                                }
-                            }}
+                            onClick={() => setAgentToApprove(agent)}
                             text="Approve"
                             color="emerald"
                             ariaLabel={`Approve ${agent.name}`}
@@ -237,6 +254,19 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents, onNavigate, o
         {activeTab === 'pending' && <PendingAgentsTable />}
         {activeTab === 'inactive' && <InactiveAgentsTable />}
       </div>
+      <ApproveAgentModal
+        isOpen={!!agentToApprove}
+        onClose={() => setAgentToApprove(null)}
+        agentName={agentToApprove?.name || ''}
+        currentRole={userForApproval?.role as UserRole.AGENT | UserRole.SUB_ADMIN || UserRole.AGENT}
+        onConfirm={(newRole) => {
+            if (agentToApprove) {
+                onApproveAgent(agentToApprove.id, newRole);
+                setAgentToApprove(null);
+                setActiveTab('active');
+            }
+        }}
+    />
     </div>
   );
 };

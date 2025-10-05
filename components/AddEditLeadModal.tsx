@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Client, Agent } from '../types';
+// FIX: Import ClientStatus enum to resolve type error.
+import { Client, Agent, ClientStatus } from '../types';
 import { CloseIcon, PlusIcon } from './icons';
 
 interface AddEditLeadModalProps {
@@ -80,7 +81,8 @@ const AddEditLeadModal: React.FC<AddEditLeadModalProps> = ({ isOpen, onClose, on
     const leadPayload: Client = {
         ...leadToEdit, // a bit of a hack to preserve other fields like address, joinDate, etc.
         id: leadToEdit?.id || 0, // 0 for new
-        status: leadToEdit?.status || 'Lead',
+        // FIX: Use ClientStatus.LEAD enum member instead of a string literal to match the expected type.
+        status: leadToEdit?.status || ClientStatus.LEAD,
         joinDate: leadToEdit?.joinDate || '',
         address: leadToEdit?.address || '',
         // Form fields

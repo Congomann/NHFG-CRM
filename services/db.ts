@@ -1,7 +1,7 @@
-import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS } from '../constants';
-import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification } from '../types';
+import { MOCK_USERS, MOCK_AGENTS, MOCK_CLIENTS, MOCK_POLICIES, MOCK_INTERACTIONS, MOCK_TASKS, MOCK_MESSAGES, MOCK_LICENSES, MOCK_NOTIFICATIONS, MOCK_CALENDAR_NOTES, MOCK_TESTIMONIALS } from '../constants';
+import { User, Agent, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial } from '../types';
 
-const DB_PREFIX = 'safariLifeCrm_';
+const DB_PREFIX = 'newHollandFinancial_';
 
 const getFromStorage = <T>(key: string, mockData: T): T => {
     try {
@@ -32,6 +32,9 @@ export const getTasks = () => getFromStorage<Task[]>('tasks', MOCK_TASKS);
 export const getMessages = () => getFromStorage<Message[]>('messages', MOCK_MESSAGES);
 export const getLicenses = () => getFromStorage<License[]>('licenses', MOCK_LICENSES);
 export const getNotifications = () => getFromStorage<Notification[]>('notifications', MOCK_NOTIFICATIONS);
+export const getCalendarNotes = () => getFromStorage<CalendarNote[]>('calendarNotes', MOCK_CALENDAR_NOTES);
+export const getTestimonials = () => getFromStorage<Testimonial[]>('testimonials', MOCK_TESTIMONIALS);
+
 
 // Savers (for entire tables)
 export const saveUsers = (data: User[]) => saveToStorage('users', data);
@@ -43,10 +46,13 @@ export const saveTasks = (data: Task[]) => saveToStorage('tasks', data);
 export const saveMessages = (data: Message[]) => saveToStorage('messages', data);
 export const saveLicenses = (data: License[]) => saveToStorage('licenses', data);
 export const saveNotifications = (data: Notification[]) => saveToStorage('notifications', data);
+export const saveCalendarNotes = (data: CalendarNote[]) => saveToStorage('calendarNotes', data);
+export const saveTestimonials = (data: Testimonial[]) => saveToStorage('testimonials', data);
+
 
 // Check if it's the first run to initialize data from mocks
 if (!localStorage.getItem(`${DB_PREFIX}initialized`)) {
-    console.log("Initializing database in localStorage for the first time.");
+    console.log("Initializing New Holland Financial database in localStorage for the first time.");
     saveUsers(MOCK_USERS);
     saveAgents(MOCK_AGENTS);
     saveClients(MOCK_CLIENTS);
@@ -56,5 +62,7 @@ if (!localStorage.getItem(`${DB_PREFIX}initialized`)) {
     saveMessages(MOCK_MESSAGES);
     saveLicenses(MOCK_LICENSES);
     saveNotifications(MOCK_NOTIFICATIONS);
+    saveCalendarNotes(MOCK_CALENDAR_NOTES);
+    saveTestimonials(MOCK_TESTIMONIALS);
     localStorage.setItem(`${DB_PREFIX}initialized`, 'true');
 }

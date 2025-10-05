@@ -1,12 +1,12 @@
-import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification } from './types';
+import { Client, Policy, Interaction, Task, ClientStatus, PolicyType, PolicyStatus, InteractionType, User, UserRole, Agent, Message, AgentStatus, License, LicenseType, Notification, CalendarNote, Testimonial, TestimonialStatus } from './types';
 
 // NOTE: Passwords are in plaintext for demonstration purposes ONLY.
 // In a real application, these would be securely hashed server-side.
 export const MOCK_USERS: User[] = [
-    { id: 1, name: 'Adama Lee', email: 'admin@safarilife.com', password: 'password123', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
-    { id: 2, name: 'Gaius Baltar', email: 'subadmin@safarilife.com', password: 'password123', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
-    { id: 3, name: 'Kara Thrace', email: 'kara.t@safarilife.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent1', title: 'Senior Agent' },
-    { id: 4, name: 'Alex Ray', email: 'alex.r@safarilife.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://picsum.photos/id/237/200/200', title: 'Insurance Agent' },
+    { id: 1, name: 'Adama Lee', email: 'admin@newhollandfinancial.com', password: 'password123', role: UserRole.ADMIN, avatar: 'https://i.pravatar.cc/150?u=admin', title: 'System Administrator' },
+    { id: 2, name: 'Gaius Baltar', email: 'subadmin@newhollandfinancial.com', password: 'password123', role: UserRole.SUB_ADMIN, avatar: 'https://i.pravatar.cc/150?u=subadmin', title: 'Lead Manager' },
+    { id: 3, name: 'Kara Thrace', email: 'kara.t@newhollandfinancial.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://i.pravatar.cc/150?u=agent1', title: 'Senior Agent' },
+    { id: 4, name: 'Alex Ray', email: 'alex.r@newhollandfinancial.com', password: 'password123', role: UserRole.AGENT, avatar: 'https://picsum.photos/id/237/200/200', title: 'Insurance Agent' },
 ];
 
 export const MOCK_AGENTS: Agent[] = [
@@ -15,7 +15,7 @@ export const MOCK_AGENTS: Agent[] = [
         name: 'Kara Thrace', 
         slug: 'kara-thrace',
         avatar: 'https://i.pravatar.cc/150?u=agent1',
-        email: 'kara.t@safarilife.com', 
+        email: 'kara.t@newhollandfinancial.com', 
         leads: 25, 
         clientCount: 1,
         conversionRate: 0.8,
@@ -24,13 +24,9 @@ export const MOCK_AGENTS: Agent[] = [
         phone: '(214) 555-1234',
         languages: ['English', 'Spanish'],
         bio: 'Helping families secure their future is my passion. I specialize in life insurance, retirement planning, and protecting what matters most to you.',
-        calendarLink: 'https://calendly.com/safarilife-kara',
+        calendarLink: 'https://calendly.com/newholland-kara',
         status: AgentStatus.ACTIVE,
         joinDate: '2022-08-15',
-        testimonials: [
-            { quote: 'Kara helped me find affordable coverage for my family. I feel so much more secure knowing we’re protected.', author: 'Maria G.' },
-            { quote: 'Extremely knowledgeable and patient. Kara walked me through all my options without any pressure.', author: 'David L.' },
-        ],
         socials: {
             whatsapp: 'https://wa.me/12145551234',
             linkedin: 'https://linkedin.com/in/karathrace',
@@ -46,7 +42,7 @@ export const MOCK_AGENTS: Agent[] = [
         name: 'Alex Ray',
         slug: 'alex-ray', 
         avatar: 'https://picsum.photos/id/237/200/200',
-        email: 'alex.r@safarilife.com', 
+        email: 'alex.r@newhollandfinancial.com', 
         leads: 30, 
         clientCount: 2,
         conversionRate: 0.75,
@@ -55,12 +51,9 @@ export const MOCK_AGENTS: Agent[] = [
         phone: '(512) 555-5678',
         languages: ['English'],
         bio: 'I focus on creating customized insurance strategies for small business owners and entrepreneurs. Let\'s build a plan that grows with your business.',
-        calendarLink: 'https://calendly.com/safarilife-alex',
+        calendarLink: 'https://calendly.com/newholland-alex',
         status: AgentStatus.ACTIVE,
         joinDate: '2023-01-20',
-        testimonials: [
-            { quote: 'Alex is a true professional. He understood my business needs and found the perfect group benefits package for my team.', author: 'John S.' },
-        ],
         socials: {
             whatsapp: '',
             linkedin: 'https://linkedin.com/in/alexray',
@@ -76,7 +69,7 @@ export const MOCK_AGENTS: Agent[] = [
         name: 'Saul Tigh', 
         slug: 'saul-tigh',
         avatar: 'https://i.pravatar.cc/150?u=agent3',
-        email: 'saul.t@safarilife.com', 
+        email: 'saul.t@newhollandfinancial.com', 
         leads: 15, 
         clientCount: 1,
         conversionRate: 0.9,
@@ -85,12 +78,9 @@ export const MOCK_AGENTS: Agent[] = [
         phone: '(713) 555-9012',
         languages: ['English', 'German'],
         bio: 'With over 20 years of experience, I provide comprehensive auto, home, and property insurance solutions. My goal is to ensure you are properly covered for life\'s unexpected events.',
-        calendarLink: 'https://calendly.com/safarilife-saul',
+        calendarLink: 'https://calendly.com/newholland-saul',
         status: AgentStatus.INACTIVE,
         joinDate: '2021-11-01',
-        testimonials: [
-            { quote: 'Saul saved me hundreds on my auto insurance while getting me better coverage. A fantastic experience from start to finish.', author: 'Laura P.' },
-        ],
         socials: {
             whatsapp: '',
             linkedin: '',
@@ -106,7 +96,7 @@ export const MOCK_AGENTS: Agent[] = [
         name: 'Laura Roslin', 
         slug: 'laura-roslin',
         avatar: 'https://i.pravatar.cc/150?u=agent4',
-        email: 'laura.r@safarilife.com', 
+        email: 'laura.r@newhollandfinancial.com', 
         leads: 0, 
         clientCount: 0,
         conversionRate: 0,
@@ -115,12 +105,19 @@ export const MOCK_AGENTS: Agent[] = [
         phone: '(123) 555-0100',
         languages: ['English'],
         bio: 'Eager to begin a new career in helping clients achieve peace of mind through comprehensive insurance solutions.',
-        calendarLink: 'https://calendly.com/safarilife-laura',
+        calendarLink: 'https://calendly.com/newholland-laura',
         status: AgentStatus.PENDING,
         joinDate: '',
-        testimonials: [],
         socials: {},
     },
+];
+
+export const MOCK_TESTIMONIALS: Testimonial[] = [
+    { id: 1, agentId: 3, author: 'Maria G.', quote: 'Kara helped me find affordable coverage for my family. I feel so much more secure knowing we’re protected.', status: TestimonialStatus.APPROVED, submissionDate: '2024-06-10' },
+    { id: 2, agentId: 3, author: 'David L.', quote: 'Extremely knowledgeable and patient. Kara walked me through all my options without any pressure.', status: TestimonialStatus.APPROVED, submissionDate: '2024-05-22' },
+    { id: 3, agentId: 4, author: 'John S.', quote: 'Alex is a true professional. He understood my business needs and found the perfect group benefits package for my team.', status: TestimonialStatus.APPROVED, submissionDate: '2024-04-15' },
+    { id: 4, agentId: 5, author: 'Laura P.', quote: 'Saul saved me hundreds on my auto insurance while getting me better coverage. A fantastic experience from start to finish.', status: TestimonialStatus.APPROVED, submissionDate: '2024-03-01' },
+    { id: 5, agentId: 3, author: 'Samuel T.', quote: 'Working with Kara was a breeze. She is very responsive and clearly explained everything. I highly recommend her services!', status: TestimonialStatus.PENDING, submissionDate: '2024-06-18' },
 ];
 
 export const MOCK_CLIENTS: Client[] = [
@@ -195,5 +192,24 @@ export const MOCK_MESSAGES: Message[] = [
     { id: 6, senderId: 1, receiverId: 2, text: 'Kara Thrace has the most bandwidth right now.', timestamp: '2024-06-18T09:02:00Z' },
     { id: 7, senderId: 4, receiverId: 3, text: 'Can you help me with the paperwork for the Smith policy?', timestamp: '2024-06-18T14:00:00Z' },
 ];
+
+export const NOTE_COLORS: { name: string; bg: string; text: string; ring: string; }[] = [
+    { name: 'Red', bg: 'bg-rose-100', text: 'text-rose-800', ring: 'ring-rose-500' },
+    { name: 'Yellow', bg: 'bg-amber-100', text: 'text-amber-800', ring: 'ring-amber-500' },
+    { name: 'Green', bg: 'bg-emerald-100', text: 'text-emerald-800', ring: 'ring-emerald-500' },
+    { name: 'Blue', bg: 'bg-sky-100', text: 'text-sky-800', ring: 'ring-sky-500' },
+    { name: 'Purple', bg: 'bg-violet-100', text: 'text-violet-800', ring: 'ring-violet-500' },
+    { name: 'Gray', bg: 'bg-slate-100', text: 'text-slate-800', ring: 'ring-slate-500' },
+];
+
+
+export const MOCK_CALENDAR_NOTES: CalendarNote[] = [
+    { id: 1, userId: 1, date: '2024-07-10', text: 'Follow up with all pending agents.', color: 'Red' },
+    { id: 2, userId: 3, date: '2024-07-15', text: 'Annual policy review for John Doe.', color: 'Blue' },
+    { id: 3, userId: 4, date: '2024-07-15', text: 'Call Diana Prince re: life insurance options.', color: 'Green' },
+    { id: 4, userId: 2, date: '2024-07-22', text: 'Review new lead assignments for the week.', color: 'Yellow' },
+    { id: 5, userId: 1, date: '2024-07-29', text: 'Quarterly commission payout processing.', color: 'Purple' },
+];
+
 
 export const MOCK_NOTIFICATIONS: Notification[] = [];

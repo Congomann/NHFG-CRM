@@ -85,7 +85,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
               <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full mr-4" />
               <div>
                 <p className="font-semibold text-slate-800">{user.name}</p>
-                <p className="text-sm text-slate-500">{user.role}</p>
+                <p className="text-sm text-slate-500">{user.title}</p>
               </div>
             </div>
           ))}

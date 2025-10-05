@@ -49,6 +49,11 @@ export enum LicenseType {
     NON_RESIDENT = 'Non-Resident License',
 }
 
+export enum TestimonialStatus {
+  PENDING = 'Pending',
+  APPROVED = 'Approved',
+}
+
 export interface User {
   id: number;
   name: string;
@@ -58,6 +63,8 @@ export interface User {
   role: UserRole;
   avatar: string;
   title: string;
+  isVerified?: boolean;
+  verificationCode?: string;
 }
 
 export interface Agent {
@@ -77,7 +84,6 @@ export interface Agent {
     avatar: string;
     status: AgentStatus;
     joinDate: string;
-    testimonials: { quote: string; author: string; }[];
     socials: {
         whatsapp?: string;
         linkedin?: string;
@@ -178,4 +184,30 @@ export interface Notification {
   timestamp: string;
   isRead: boolean;
   link: string; // The view to navigate to, e.g., 'client/5'
+}
+
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
+
+export interface ToastMessage {
+  id: string;
+  type: ToastType;
+  title: string;
+  message: string;
+}
+
+export interface CalendarNote {
+  id: number;
+  userId: number;
+  date: string; // YYYY-MM-DD
+  text: string;
+  color: string; // e.g., 'Blue', 'Green', 'Red'
+}
+
+export interface Testimonial {
+  id: number;
+  agentId: number;
+  author: string; // e.g., 'Maria G.'
+  quote: string;
+  status: TestimonialStatus;
+  submissionDate: string; // YYYY-MM-DD
 }
