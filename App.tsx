@@ -19,6 +19,10 @@ import CalendarView from './components/CalendarView';
 import TestimonialsManagement from './components/TestimonialsManagement';
 import BroadcastModal from './components/BroadcastModal';
 import DemoModeSwitcher from './components/DemoModeSwitcher';
+import PublicLayout from './components/PublicLayout';
+import HomePage from './components/HomePage';
+import WebsiteStructureView from './components/WebsiteStructureView';
+
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -58,7 +62,7 @@ const App: React.FC = () => {
   const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(currentUser);
 
   // UI state
-  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentView, setCurrentView] = useState(window.location.hash.replace(/^#\/?/, '') || 'home');
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState<Client | null>(null);
@@ -74,7 +78,7 @@ const App: React.FC = () => {
   const [impersonatedRole, setImpersonatedRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'dashboard';
+    const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'home';
 
     const syncViewFromHash = () => {
         const viewFromHash = getViewFromHash();
@@ -183,6 +187,15 @@ const App: React.FC = () => {
   };
 
   const renderContent = (displayUser: User) => {
+    const publicViews = ['home', 'about', 'services', 'contact', ''];
+    if (publicViews.includes(currentView)) {
+        return (
+            <PublicLayout onNavigate={handleNavigation}>
+                <HomePage onNavigate={handleNavigation} />
+            </PublicLayout>
+        );
+    }
+    
     if (currentView.startsWith('client/')) {
       const clientId = parseInt(currentView.split('/')[1], 10);
       const client = clients.find(c => c.id === clientId);
@@ -353,8 +366,23 @@ const App: React.FC = () => {
             }
         }
         break;
+      case 'website-structure':
+        if (displayUser.role === UserRole.ADMIN) {
+            return <WebsiteStructureView />;
+        }
+        break;
       case 'dashboard':
       default:
+        // If the default route is hit and it's not 'dashboard', it might be an old link.
+        // Redirect to homepage if it's not a known CRM view.
+        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile', 'website-structure'];
+        if (!knownCrmViews.some(v => currentView.startsWith(v))) {
+             return (
+                <PublicLayout onNavigate={handleNavigation}>
+                    <HomePage onNavigate={handleNavigation} />
+                </PublicLayout>
+            );
+        }
         return <Dashboard 
                 user={displayUser}
                 clients={clients}
@@ -387,29 +415,41 @@ const App: React.FC = () => {
 
       const effectiveRole = impersonatedRole || currentUser.role;
 
+      const publicViews = ['home', 'about', 'services', 'contact', ''];
+      const isPublicSiteView = publicViews.includes(currentView.split('/')[0]);
+
       return (
-        <div className="flex h-screen bg-background font-sans">
-          {!isAgentProfileView && <Sidebar 
-            currentUser={currentUser}
-            currentView={currentView} 
-            onNavigate={handleNavigation}
-            onEditMyProfile={() => setIsMyProfileModalOpen(true)}
-            notifications={notifications}
-            onNotificationClick={handleNotificationClick}
-            onClearAllNotifications={() => {}}
-            impersonatedRole={impersonatedRole}
-            />}
-          <main className={`flex-1 overflow-y-auto relative ${!isAgentProfileView ? 'ml-64' : ''}`}>
-            {currentUser.role === UserRole.ADMIN && !isAgentProfileView && (
-              <DemoModeSwitcher
-                activeRole={effectiveRole}
-                onSwitch={setImpersonatedRole}
-              />
-            )}
-            <div key={currentView + displayUser.role + displayUser.id} className="page-enter">
+        <div className="h-screen bg-background font-sans">
+          {isPublicSiteView ? (
+             <div className="page-enter">
                 {renderContent(displayUser)}
+             </div>
+          ) : (
+            <div className="flex h-full">
+                <Sidebar 
+                    currentUser={currentUser}
+                    currentView={currentView} 
+                    onNavigate={handleNavigation}
+                    onEditMyProfile={() => setIsMyProfileModalOpen(true)}
+                    notifications={notifications}
+                    onNotificationClick={handleNotificationClick}
+                    onClearAllNotifications={() => {}}
+                    impersonatedRole={impersonatedRole}
+                />
+                <main className={`flex-1 overflow-y-auto relative ml-64`}>
+                    {currentUser.role === UserRole.ADMIN && (
+                    <DemoModeSwitcher
+                        activeRole={effectiveRole}
+                        onSwitch={setImpersonatedRole}
+                    />
+                    )}
+                    <div key={currentView + displayUser.role + displayUser.id} className="page-enter">
+                        {renderContent(displayUser)}
+                    </div>
+                </main>
             </div>
-          </main>
+          )}
+          
           <AddClientModal 
             isOpen={isClientModalOpen} 
             onClose={() => setIsClientModalOpen(false)}

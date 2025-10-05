@@ -22,6 +22,7 @@ const navConfig = {
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'commissions', label: 'Commissions', icon: <DollarSignIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
+    { id: 'website-structure', label: 'Website Structure', icon: <GlobeAltIcon /> },
   ],
   [UserRole.SUB_ADMIN]: [
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },
