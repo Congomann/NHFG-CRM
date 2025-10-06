@@ -21,6 +21,7 @@ import BroadcastModal from './components/BroadcastModal';
 import DemoModeSwitcher from './components/DemoModeSwitcher';
 import PublicLayout from './components/PublicLayout';
 import HomePage from './components/HomePage';
+import AIAssistantView from './components/AIAssistantView';
 
 import { useDatabase } from './hooks/useDatabase';
 import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
@@ -213,6 +214,20 @@ const App: React.FC = () => {
       }
     }
 
+    if (currentView.startsWith('ai-assistant')) {
+        return <AIAssistantView
+            currentUser={displayUser}
+            clients={clients}
+            tasks={tasks}
+            agents={agents}
+            policies={policies}
+            interactions={interactions}
+            onSaveTask={handlers.handleSaveTask}
+            onAssignLead={handlers.handleUpdateClient}
+            onNavigate={handleNavigation}
+        />;
+    }
+
     if (isAgentProfileView) {
         const agentSlug = currentView.split('/')[1];
         const agent = agents.find(a => a.slug === agentSlug);
@@ -369,7 +384,7 @@ const App: React.FC = () => {
       default:
         // If the default route is hit and it's not 'dashboard', it might be an old link.
         // Redirect to homepage if it's not a known CRM view.
-        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile'];
+        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile', 'ai-assistant'];
         if (!knownCrmViews.some(v => currentView.startsWith(v))) {
              return (
                 <PublicLayout onNavigate={handleNavigation}>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon } from './icons';
 import { User, UserRole, Notification } from '../types';
 
 interface SidebarProps {
@@ -16,6 +16,7 @@ interface SidebarProps {
 const navConfig = {
   [UserRole.ADMIN]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+    { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'clients', label: 'Clients', icon: <ClientsIcon /> },
     { id: 'agents', label: 'Agents', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'Tasks', icon: <TasksIcon /> },
@@ -25,12 +26,14 @@ const navConfig = {
   ],
   [UserRole.SUB_ADMIN]: [
     { id: 'dashboard', label: 'Lead Dashboard', icon: <DashboardIcon /> },
+    { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'leads', label: 'Lead Distribution', icon: <ClientsIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },
     { id: 'messages', label: 'Messages', icon: <MessageIcon /> },
   ],
   [UserRole.AGENT]: [
     { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+    { id: 'ai-assistant', label: 'AI Assistant', icon: <AiSparklesIcon /> },
     { id: 'clients', label: 'My Clients', icon: <ClientsIcon /> },
     { id: 'tasks', label: 'My Tasks', icon: <TasksIcon /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarDaysIcon /> },

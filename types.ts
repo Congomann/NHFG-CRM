@@ -216,3 +216,27 @@ export interface Testimonial {
   status: TestimonialStatus;
   submissionDate: string; // YYYY-MM-DD
 }
+
+export type AISuggestionActionType = 'CREATE_TASK' | 'DRAFT_EMAIL' | 'ASSIGN_LEAD' | 'INFO_ONLY';
+
+export interface AISuggestionAction {
+  type: AISuggestionActionType;
+  clientId?: number;
+  prompt?: string;
+  assignToAgentId?: number;
+  assignToAgentName?: string;
+}
+
+export interface AISuggestion {
+  priority: 'High' | 'Medium' | 'Low';
+  title: string;
+  description: string;
+  action: AISuggestionAction;
+}
+
+export interface EmailDraft {
+  to: string;
+  clientName: string;
+  subject: string;
+  body: string;
+}

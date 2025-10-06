@@ -86,6 +86,10 @@ export const useDatabase = (currentUser: User | null) => {
             () => apiClient.post('/api/clients', clientData),
             'Client Added', 'New client has been successfully created.'
         ),
+        handleUpdateClient: (clientId: number, clientData: Partial<Client>) => handleApiCall(
+            () => apiClient.put(`/api/clients/${clientId}`, clientData),
+            'Client Updated', 'Client details have been successfully updated.'
+        ),
         handleSaveTask: async (taskData: Omit<Task, 'id'|'completed'> & { id?: number }) => {
             const apiCall = taskData.id
                 ? () => apiClient.put(`/api/tasks/${taskData.id}`, taskData)
