@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { User, Message, UserRole } from '../types';
-import { PencilIcon, TrashIcon, BroadcastIcon } from './icons';
+import { PencilIcon, TrashIcon, BroadcastIcon, CheckIcon, CheckAllIcon } from './icons';
 
 interface MessagingViewProps {
   currentUser: User;
@@ -16,13 +16,35 @@ interface MessagingViewProps {
   onOpenBroadcast: () => void;
 }
 
+const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    if (isToday) {
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+    if (isYesterday) {
+        return 'Yesterday';
+    }
+    return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+};
+
+
 const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messages, onSendMessage, onEditMessage, onTrashMessage, onRestoreMessage, onPermanentlyDeleteMessage, initialSelectedUserId, onMarkConversationAsRead, onOpenBroadcast }) => {
   const [viewMode, setViewMode] = useState<'inbox' | 'trash'>('inbox');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(initialSelectedUserId || null);
   const [newMessage, setNewMessage] = useState('');
   const [editingMessage, setEditingMessage] = useState<{ id: number; text: string } | null>(null);
+  const [isRecipientTyping, setIsRecipientTyping] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const editInputRef = useRef<null | HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+
 
   const otherUsers = users.filter(u => u.id !== currentUser.id);
   const userMap = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
@@ -32,7 +54,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
     if (selectedUserId) {
         onMarkConversationAsRead(selectedUserId);
     }
-  }, [selectedUserId, onMarkConversationAsRead, messages]); // Depend on messages to re-trigger when new ones arrive
+  }, [selectedUserId, onMarkConversationAsRead, messages]);
 
   useEffect(() => {
     if (viewMode === 'inbox' && otherUsers.length > 0 && selectedUserId === null) {
@@ -42,7 +64,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedUserId]);
+  }, [messages, selectedUserId, isRecipientTyping]);
 
   useEffect(() => {
     if (editingMessage && editInputRef.current) {
@@ -51,6 +73,27 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
         editInputRef.current.style.height = `${editInputRef.current.scrollHeight}px`;
     }
   }, [editingMessage]);
+  
+  // Simulate typing indicator
+  useEffect(() => {
+    setIsRecipientTyping(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    if (selectedUserId) {
+      // Simulate receiving a "typing" event after a random delay
+      typingTimeoutRef.current = window.setTimeout(() => {
+        setIsRecipientTyping(true);
+        // Simulate the typing ending after a few seconds
+        typingTimeoutRef.current = window.setTimeout(() => {
+          setIsRecipientTyping(false);
+        }, 3000); // User types for 3 seconds
+      }, Math.random() * 2000 + 1000); // Starts typing after 1-3 seconds
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [selectedUserId]);
   
   const handleSelectUser = (userId: number) => {
     setViewMode('inbox');
@@ -122,7 +165,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
   };
 
   return (
-    <div className="flex h-screen -my-16">
+    <div className="flex h-full">
       <div className="w-1/3 border-r border-slate-200 bg-white flex flex-col">
         <div className="p-4 border-b border-slate-200 flex justify-between items-center">
             <h1 className="text-2xl font-bold text-slate-800">Messages</h1>
@@ -155,24 +198,34 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
             <div
               key={user.id}
               onClick={() => handleSelectUser(user.id)}
-              className={`p-4 flex items-center cursor-pointer border-l-4 ${viewMode === 'inbox' && selectedUserId === user.id ? 'bg-primary-50 border-primary-600' : 'border-transparent hover:bg-slate-50'}`}
+              className={`p-4 flex items-start cursor-pointer border-l-4 ${viewMode === 'inbox' && selectedUserId === user.id ? 'bg-primary-50 border-primary-600' : 'border-transparent hover:bg-slate-50'}`}
             >
               <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full mr-4" />
               <div className="flex-1 overflow-hidden">
                 <div className="flex justify-between items-center">
                     <p className={`font-semibold text-slate-800 ${unreadCount > 0 ? 'text-primary-700' : ''}`}>{user.name}</p>
+                    {lastMessage && <p className="text-xs text-slate-400 flex-shrink-0 ml-2">{formatTimestamp(lastMessage.timestamp)}</p>}
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm truncate">
+                        {lastMessage?.senderId === currentUser.id && (
+                            lastMessage.isRead 
+                            ? <CheckAllIcon className="w-4 h-4 mr-1.5 text-sky-500 flex-shrink-0" /> 
+                            : <CheckIcon className="w-4 h-4 mr-1.5 text-slate-400 flex-shrink-0" />
+                        )}
+                        {lastMessage ? (
+                            <p className={`truncate ${unreadCount > 0 ? 'text-slate-700 font-medium' : 'text-slate-500'}`}>
+                                {lastMessage.senderId === currentUser.id && 'You: '}
+                                {lastMessage.text}
+                            </p>
+                        ) : (
+                            <p className="text-sm text-slate-400 italic">No messages yet.</p>
+                        )}
+                    </div>
                     {unreadCount > 0 && (
-                        <span className="w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{unreadCount}</span>
+                        <span className="w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0 ml-2">{unreadCount}</span>
                     )}
                 </div>
-                {lastMessage ? (
-                     <p className={`text-sm ${unreadCount > 0 ? 'text-slate-700 font-medium' : 'text-slate-500'} truncate`}>
-                        {lastMessage.senderId === currentUser.id && 'You: '}
-                        {lastMessage.text}
-                    </p>
-                ) : (
-                    <p className="text-sm text-slate-400 italic">No messages yet.</p>
-                )}
               </div>
             </div>
           )})}
@@ -193,8 +246,8 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                     const isEditable = isMyMessage && (currentTime - messageTime) < 2 * 60 * 1000;
 
                     return (
-                        <div key={msg.id} className={`flex mb-2 items-start group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                            {isMyMessage && editingMessage?.id !== msg.id && (
+                        <div key={msg.id} className={`flex mb-2 items-end group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                             {isMyMessage && editingMessage?.id !== msg.id && (
                                 <div className="self-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
                                     <button onClick={() => onTrashMessage(msg.id)} className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete message">
                                         <TrashIcon className="w-4 h-4" />
@@ -207,7 +260,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                                 </div>
                             )}
                             
-                            <div className={`rounded-lg px-4 py-2 max-w-lg ${isMyMessage ? 'bg-primary-600 text-white' : 'bg-white shadow-sm'}`}>
+                            <div className={`rounded-lg px-3 py-2 max-w-lg ${isMyMessage ? 'bg-primary-600 text-white' : 'bg-white shadow-sm'}`}>
                                 {editingMessage?.id === msg.id ? (
                                     <div className="w-full">
                                         <textarea
@@ -236,10 +289,20 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-end">
+                                    <>
                                         <p className="whitespace-pre-wrap">{msg.text}</p>
-                                        {msg.edited && <span className={`text-xs ml-2 ${isMyMessage ? 'text-primary-200' : 'text-slate-400'}`}>(edited)</span>}
-                                    </div>
+                                        <div className="flex items-center justify-end mt-1">
+                                            {msg.edited && <span className={`text-xs mr-1 ${isMyMessage ? 'text-primary-200' : 'text-slate-400'}`}>(edited)</span>}
+                                            <span className={`text-xs ${isMyMessage ? 'text-primary-200' : 'text-slate-400'}`}>
+                                                {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                            </span>
+                                            {isMyMessage && (
+                                                msg.isRead 
+                                                ? <CheckAllIcon className="w-4 h-4 ml-1 text-sky-400" /> 
+                                                : <CheckIcon className="w-4 h-4 ml-1" />
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
                             {!isMyMessage && (
@@ -252,6 +315,15 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                         </div>
                     )
                 })}
+                 {isRecipientTyping && (
+                    <div className="flex mb-2 items-end justify-start">
+                        <div className="rounded-lg px-4 py-3 max-w-lg bg-white shadow-sm flex items-center">
+                            <div className="typing-dot" />
+                            <div className="typing-dot" />
+                            <div className="typing-dot" />
+                        </div>
+                    </div>
+                )}
                 <div ref={messagesEndRef} />
             </div>
             <div className="p-4 bg-white border-t border-slate-200">

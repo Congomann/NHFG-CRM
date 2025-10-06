@@ -75,7 +75,7 @@ const App: React.FC = () => {
   const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
   const [clientListAgentFilter, setClientListAgentFilter] = useState<Agent | null>(null);
   const [highlightedAgentId, setHighlightedAgentId] = useState<number | null>(null);
-  const [impersonatedRole, setImpersonatedRole] = useState<UserRole | null>(null);
+  const [impersonatedUserId, setImpersonatedUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'home';
@@ -92,6 +92,14 @@ const App: React.FC = () => {
     window.addEventListener('hashchange', syncViewFromHash);
     return () => window.removeEventListener('hashchange', syncViewFromHash);
   }, [currentView]);
+
+
+  const displayUser = useMemo(() => {
+    if (impersonatedUserId === null || !users || users.length === 0) {
+      return currentUser;
+    }
+    return users.find(u => u.id === impersonatedUserId) || currentUser;
+  }, [impersonatedUserId, currentUser, users]);
 
 
   const handleNavigation = (view: string) => {
@@ -186,7 +194,7 @@ const App: React.FC = () => {
     setIsBroadcastModalOpen(false);
   };
 
-  const renderContent = (displayUser: User) => {
+  const renderContent = () => {
     const publicViews = ['home', 'about', 'services', 'contact', ''];
     if (publicViews.includes(currentView)) {
         return (
@@ -412,17 +420,8 @@ const App: React.FC = () => {
         );
       }
       
-      const DEMO_AGENT_USER = users.find(u => u.email === 'kara.t@newhollandfinancial.com');
-      const DEMO_SUB_ADMIN_USER = users.find(u => u.email === 'subadmin@newhollandfinancial.com');
-
-      let displayUser = currentUser;
-      if (impersonatedRole === UserRole.AGENT && DEMO_AGENT_USER) {
-          displayUser = DEMO_AGENT_USER;
-      } else if (impersonatedRole === UserRole.SUB_ADMIN && DEMO_SUB_ADMIN_USER) {
-          displayUser = DEMO_SUB_ADMIN_USER;
-      }
-
-      const effectiveRole = impersonatedRole || currentUser.role;
+      const subAdminUser = users.find(u => u.role === UserRole.SUB_ADMIN);
+      const activeAgents = useMemo(() => agents.filter(a => a.status === AgentStatus.ACTIVE), [agents]);
 
       const publicViews = ['home', 'about', 'services', 'contact', ''];
       const isPublicSiteView = publicViews.includes(currentView.split('/')[0]);
@@ -431,7 +430,7 @@ const App: React.FC = () => {
         <div className="h-screen bg-background font-sans">
           {isPublicSiteView ? (
              <div className="page-enter">
-                {renderContent(displayUser)}
+                {renderContent()}
              </div>
           ) : (
             <div className="flex h-full">
@@ -443,17 +442,20 @@ const App: React.FC = () => {
                     notifications={notifications}
                     onNotificationClick={handleNotificationClick}
                     onClearAllNotifications={() => {}}
-                    impersonatedRole={impersonatedRole}
+                    impersonatedRole={impersonatedUserId ? displayUser.role : null}
                 />
                 <main className={`flex-1 overflow-y-auto relative ml-64`}>
                     {currentUser.role === UserRole.ADMIN && (
                     <DemoModeSwitcher
-                        activeRole={effectiveRole}
-                        onSwitch={setImpersonatedRole}
+                        adminUser={currentUser}
+                        subAdminUser={subAdminUser}
+                        agents={activeAgents}
+                        impersonatedUserId={impersonatedUserId}
+                        onSwitchUser={setImpersonatedUserId}
                     />
                     )}
-                    <div key={currentView + displayUser.role + displayUser.id} className="page-enter">
-                        {renderContent(displayUser)}
+                    <div key={currentView + displayUser.role + displayUser.id} className={`page-enter ${currentView.startsWith('messages') ? 'h-full' : ''}`}>
+                        {renderContent()}
                     </div>
                 </main>
             </div>
