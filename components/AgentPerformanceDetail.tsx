@@ -48,8 +48,6 @@ const AgentPerformanceDetail: React.FC<AgentPerformanceDetailProps> = ({ agent, 
 
     return Object.entries(data)
         .map(([name, value]) => ({ name, Commission: value }))
-        // FIX: The type inference for `b.Commission` and `a.Commission` might be incorrect in some TypeScript environments.
-        // Explicitly casting to number ensures the subtraction works as expected.
         .sort((a, b) => (b.Commission as number) - (a.Commission as number));
   }, [agent, agentPolicies]);
 

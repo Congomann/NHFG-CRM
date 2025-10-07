@@ -12,6 +12,9 @@ interface AgentPerformanceChartProps {
 }
 
 const formatCurrency = (amount: number) => {
+    if (amount >= 1000) {
+        return `$${(amount / 1000).toFixed(0)}k`;
+    }
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -21,34 +24,34 @@ const formatCurrency = (amount: number) => {
 };
 
 const AgentPerformanceChart: React.FC<AgentPerformanceChartProps> = ({ data }) => {
+  const chartData = data.filter(d => d.status === 'Active').sort((a, b) => b.totalPremium - a.totalPremium);
+
   return (
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart
-        data={data}
+        data={chartData}
         margin={{
-          top: 5, right: 20, left: 20, bottom: 5,
+          top: 5, right: 20, left: 0, bottom: 5,
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
         <YAxis 
             yAxisId="left" 
             orientation="left" 
-            stroke="#0284c7" 
-            label={{ value: 'Total AP Sold', angle: -90, position: 'insideLeft' }} 
+            stroke="#4f46e5"
             tickFormatter={(value) => formatCurrency(Number(value))} 
         />
         <YAxis 
             yAxisId="right" 
             orientation="right" 
-            stroke="#16a34a" 
-            label={{ value: 'Override Earned', angle: 90, position: 'insideRight' }} 
+            stroke="#10b981" 
             tickFormatter={(value) => formatCurrency(Number(value))} 
         />
-        <Tooltip formatter={(value: number, name: string) => [formatCurrency(value), name === 'totalPremium' ? 'Total AP Sold' : 'Override Earned']} />
+        <Tooltip formatter={(value: number, name: string) => [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), name === 'totalPremium' ? 'Total AP Sold' : 'Override Earned']} />
         <Legend />
-        <Bar yAxisId="left" dataKey="totalPremium" name="Total AP Sold" fill="#0284c7" />
-        <Line yAxisId="right" type="monotone" dataKey="overrideEarned" name="Override Earned" stroke="#16a34a" strokeWidth={2} />
+        <Bar yAxisId="left" dataKey="totalPremium" name="Total AP Sold" fill="#818cf8" barSize={20} />
+        <Line yAxisId="right" type="monotone" dataKey="overrideEarned" name="Override Earned" stroke="#10b981" strokeWidth={2} />
       </ComposedChart>
     </ResponsiveContainer>
   );

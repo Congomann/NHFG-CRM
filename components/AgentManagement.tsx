@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Agent, AgentStatus, User, UserRole } from '../types';
-import { PlusIcon, PencilIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon } from './icons';
 import ApproveAgentModal from './ApproveAgentModal';
 
 interface AgentManagementProps {

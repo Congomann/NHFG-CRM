@@ -51,7 +51,7 @@ export const updateAgentStatus = async (agentId: number, { status }: { status: A
 };
 
 export const deleteAgent = async (agentId: number) => {
-    // The DB method now handles cascading the delete to the users table
+    // The DB method now handles cascading the delete to the users table and unassigning clients
     const success = await db.agents.delete(agentId);
     if (!success) {
         throw { status: 404, message: 'Agent not found.' };

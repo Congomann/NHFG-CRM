@@ -168,7 +168,19 @@ export const db = {
         if (!agent) throw new Error('Agent not found');
         return put<Agent>(STORES.agents, { ...agent, ...data });
     },
-    delete: (id: number) => remove(STORES.agents, id),
+    delete: async (id: number) => {
+        // Unassign clients first
+        const clients = await getAll<Client>(STORES.clients);
+        for (const client of clients) {
+            if (client.agentId === id) {
+                await put<Client>(STORES.clients, { ...client, agentId: undefined });
+            }
+        }
+        
+        // Then delete the user and agent records
+        await remove(STORES.users, id);
+        return remove(STORES.agents, id);
+    },
   },
   clients: {
       find: () => getAll<Client>(STORES.clients),
