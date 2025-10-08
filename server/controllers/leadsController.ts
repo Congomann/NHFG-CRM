@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { ClientStatus, InteractionType } from '../../types';
+import { ClientStatus, InteractionType, NotificationType } from '../../types';
 
 export const createFromProfile = async ({ leadData, agentId }: { leadData: any, agentId: number }) => {
     // 1. Create the new client record with 'Lead' status
@@ -26,6 +26,7 @@ export const createFromProfile = async ({ leadData, agentId }: { leadData: any, 
     // 3. Create a notification for the agent
     await db.createRecord('notifications', {
         userId: agentId,
+        type: NotificationType.LEAD_ASSIGNED,
         message: `You have a new lead: ${leadData.firstName} ${leadData.lastName}.`,
         timestamp: new Date().toISOString(),
         isRead: false,

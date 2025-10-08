@@ -54,6 +54,15 @@ export enum TestimonialStatus {
   APPROVED = 'Approved',
 }
 
+export enum NotificationType {
+  NEW_MESSAGE = 'new_message',
+  LEAD_ASSIGNED = 'lead_assigned',
+  TASK_DUE = 'task_due',
+  AGENT_APPROVED = 'agent_approved',
+  BROADCAST = 'broadcast',
+  GENERIC = 'generic',
+}
+
 export interface User {
   id: number;
   name: string;
@@ -185,6 +194,7 @@ export interface Message {
 export interface Notification {
   id: number;
   userId: number; // The user who receives the notification
+  type: NotificationType;
   message: string;
   timestamp: string;
   isRead: boolean;

@@ -414,7 +414,8 @@ const App: React.FC = () => {
   const AppContent = () => {
       if (isDataLoading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-background">
+            <div className="flex flex-col items-center justify-center h-screen bg-background">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mb-4"></div>
                 <div className="text-xl font-semibold text-slate-600">Loading CRM...</div>
             </div>
         );

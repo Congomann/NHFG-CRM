@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { AgentStatus, UserRole, User } from '../../types';
+import { AgentStatus, UserRole, User, NotificationType } from '../../types';
 
 export const approveAgent = async (agentId: number, { role }: { role: UserRole }) => {
     const agent = await db.agents.findById(agentId);
@@ -22,6 +22,7 @@ export const approveAgent = async (agentId: number, { role }: { role: UserRole }
     // Create a notification for the agent
     await db.createRecord('notifications', {
         userId: agentId,
+        type: NotificationType.AGENT_APPROVED,
         message: `Congratulations! Your application has been approved. Welcome to New Holland Financial.`,
         timestamp: new Date().toISOString(),
         isRead: false,

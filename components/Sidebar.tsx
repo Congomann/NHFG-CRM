@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon } from './icons';
-import { User, UserRole, Notification } from '../types';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon } from './icons';
+import { User, UserRole, Notification, NotificationType } from '../types';
 
 interface SidebarProps {
   currentView: string;
@@ -84,6 +84,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
     return "Just now";
   }
 
+  const getNotificationIcon = (type: NotificationType) => {
+    const iconClass = "w-5 h-5 flex-shrink-0";
+    switch (type) {
+      case NotificationType.NEW_MESSAGE:
+        return <MessageIcon className={`${iconClass} text-sky-500`} />;
+      case NotificationType.LEAD_ASSIGNED:
+        return <UsersIcon className={`${iconClass} text-emerald-500`} />;
+      case NotificationType.TASK_DUE:
+        return <TasksIcon className={`${iconClass} text-amber-500`} />;
+      case NotificationType.AGENT_APPROVED:
+        return <ShieldCheckIcon className={`${iconClass} text-violet-500`} />;
+      case NotificationType.BROADCAST:
+        return <BroadcastIcon className={`${iconClass} text-rose-500`} />;
+      default:
+        return <BellIcon className={`${iconClass} text-slate-500`} />;
+    }
+  };
+
   return (
     <div className="w-64 bg-slate-900 h-screen p-4 flex flex-col fixed shadow-2xl">
       <div className="flex items-center justify-between mb-10 px-2">
@@ -101,9 +119,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                         {userNotifications.length > 0 ? userNotifications.map(n => (
-                            <div key={n.id} onClick={() => handleNotificationItemClick(n)} className="p-3 border-b border-slate-700 hover:bg-slate-700 cursor-pointer">
-                                <p className={`text-sm ${n.isRead ? 'text-slate-400' : 'text-white'}`}>{n.message}</p>
-                                <p className="text-xs text-slate-500 mt-1">{timeSince(n.timestamp)}</p>
+                            <div key={n.id} onClick={() => handleNotificationItemClick(n)} className="p-3 flex items-start border-b border-slate-700 hover:bg-slate-700 cursor-pointer">
+                                <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
+                                <div className="ml-3">
+                                    <p className={`text-sm ${n.isRead ? 'text-slate-400' : 'text-white'}`}>{n.message}</p>
+                                    <p className="text-xs text-slate-500 mt-1">{timeSince(n.timestamp)}</p>
+                                </div>
                             </div>
                         )) : (
                             <p className="p-4 text-center text-sm text-slate-400">No notifications yet.</p>

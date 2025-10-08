@@ -57,7 +57,7 @@ export const useDatabase = (currentUser: User | null) => {
 
             const intervalId = setInterval(() => {
                 fetchData(true); // Subsequent polling fetches without loader
-            }, 5000); // Poll every 5 seconds
+            }, 1500); // Poll every 1.5 seconds
 
             return () => clearInterval(intervalId); // Cleanup on unmount
         }

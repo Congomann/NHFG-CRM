@@ -356,3 +356,9 @@ export const CheckAllIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => 
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M20.25 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
+
+export const ArrowUpIcon: React.FC<IconProps> = ({ className = 'w-5 h-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.64a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+    </svg>
+);

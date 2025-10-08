@@ -7,7 +7,7 @@ import * as auth from './auth';
 import { db } from './db';
 import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial } from '../types';
 
-const SIMULATED_LATENCY = 300; // ms
+const SIMULATED_LATENCY = 50; // ms
 
 // A simple routing function to handle protected resources
 const handleProtectedRequest = async (method: string, path: string, body: any, currentUser: User) => {

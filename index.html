@@ -49,12 +49,19 @@
 
       /* --- Animations --- */
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes fadeAndScaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-      @keyframes slideInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
       
-      /* Toast animations slide from top right */
-      @keyframes toast-in { from { transform: translateX(100%) translateY(-20px); opacity: 0; } to { transform: translateX(0) translateY(0); opacity: 1; } }
-      @keyframes toast-out { from { transform: translateX(0) translateY(0); opacity: 1; } to { transform: translateX(100%) translateY(-20px); opacity: 0; } }
+      /* Updated modal animation for a spring-like effect */
+      @keyframes spring-in {
+        0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+        70% { opacity: 1; transform: scale(1.02) translateY(0); }
+        100% { transform: scale(1) translateY(0); }
+      }
+
+      @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      
+      /* Toast animations slide from top right with easing */
+      @keyframes toast-in { from { transform: translateX(100%) translateY(-20px) scale(0.95); opacity: 0; } to { transform: translateX(0) translateY(0) scale(1); opacity: 1; } }
+      @keyframes toast-out { from { transform: translateX(0) translateY(0) scale(1); opacity: 1; } to { transform: translateX(100%) translateY(-20px) scale(0.95); opacity: 0; } }
       
       @keyframes float {
         0% { transform: translateY(0px); }
@@ -66,31 +73,28 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      .page-enter { animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+      .page-enter { animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
       .modal-backdrop { animation: fadeIn 0.3s ease-out forwards; }
-      .modal-panel { animation: fadeAndScaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+      .modal-panel { animation: spring-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
       
-      .card-enter { animation: slideInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards; }
-      .card-enter:nth-child(1) { animation-delay: 0.05s; }
-      .card-enter:nth-child(2) { animation-delay: 0.1s; }
-      .card-enter:nth-child(3) { animation-delay: 0.15s; }
-      .card-enter:nth-child(4) { animation-delay: 0.2s; }
-      .card-enter:nth-child(5) { animation-delay: 0.25s; }
-      
-      .row-enter { animation: slideInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards; }
-      .row-enter:nth-child(1) { animation-delay: 0.05s; }
-      .row-enter:nth-child(2) { animation-delay: 0.1s; }
-      .row-enter:nth-child(3) { animation-delay: 0.15s; }
-      .row-enter:nth-child(4) { animation-delay: 0.2s; }
-      .row-enter:nth-child(5) { animation-delay: 0.25s; }
+      /* Staggered animations for card and row loading */
+      .card-enter, .row-enter { 
+        animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards; 
+        will-change: transform, opacity;
+      }
+      .card-enter:nth-child(1), .row-enter:nth-child(1) { animation-delay: 0.05s; }
+      .card-enter:nth-child(2), .row-enter:nth-child(2) { animation-delay: 0.1s; }
+      .card-enter:nth-child(3), .row-enter:nth-child(3) { animation-delay: 0.15s; }
+      .card-enter:nth-child(4), .row-enter:nth-child(4) { animation-delay: 0.2s; }
+      .card-enter:nth-child(5), .row-enter:nth-child(5) { animation-delay: 0.25s; }
       .row-enter:nth-child(6) { animation-delay: 0.3s; }
       .row-enter:nth-child(7) { animation-delay: 0.35s; }
       .row-enter:nth-child(8) { animation-delay: 0.4s; }
       .row-enter:nth-child(9) { animation-delay: 0.45s; }
       .row-enter:nth-child(10) { animation-delay: 0.5s; }
 
-      .toast-enter { animation: toast-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-      .toast-leave { animation: toast-out 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+      .toast-enter { animation: toast-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+      .toast-leave { animation: toast-out 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
       /* --- Typing Indicator --- */
       @keyframes typing-dot-bounce {
@@ -111,22 +115,27 @@
       
       /* --- Global Component Transitions --- */
       button, a, input, select, textarea, [role="button"], .transition-all {
-        transition-property: all;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         transition-duration: 200ms;
       }
       
+      /* Enhanced button hover and active states */
       button:hover:not(:disabled), [role="button"]:hover:not(:disabled), .button-hover:hover:not(:disabled) {
-        transform: scale(1.03);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
       }
       
       button:active:not(:disabled), .button-press:active:not(:disabled) {
-        transform: scale(0.97);
+        transform: translateY(0px) scale(0.98);
+        box-shadow: none;
         transition-duration: 100ms;
       }
       
       /* Smooth focus transition for inputs */
-      input, select, textarea {
+      input:focus, select:focus, textarea:focus {
         transition-property: border-color, box-shadow;
       }
     </style>

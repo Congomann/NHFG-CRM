@@ -1,4 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Custom hook for number animation using requestAnimationFrame for smoothness
+const useCountUp = (end: number, duration: number = 1500) => {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+        let start = 0;
+        const startTime = Date.now();
+        
+        const animate = () => {
+            const now = Date.now();
+            const progress = Math.min((now - startTime) / duration, 1);
+            
+            // Ease-out quint function for a more natural animation curve
+            const easeOutProgress = 1 - Math.pow(1 - progress, 5);
+            
+            const currentCount = start + (end - start) * easeOutProgress;
+            
+            setCount(currentCount);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                setCount(end); // Ensure it ends on the exact number
+            }
+        };
+
+        requestAnimationFrame(animate);
+
+    }, [end, duration]);
+
+    return count;
+};
 
 interface SummaryCardProps {
   title: React.ReactNode;
@@ -12,12 +45,44 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, change, icon, s
   const isPositive = change && change.startsWith('+');
   const changeColor = isPositive ? 'text-emerald-600' : 'text-rose-600';
 
+  const [numericValue, setNumericValue] = useState(0);
+  const [prefix, setPrefix] = useState('');
+  const [suffix, setSuffix] = useState('');
+
+  useEffect(() => {
+    // Regex to parse value into prefix, number, and suffix (e.g., "$", "55.1", "k")
+    const match = value.match(/^([^\d.]*)([\d.]+)(.*)$/);
+    if (match) {
+        const [, p, n, s] = match;
+        setPrefix(p);
+        setNumericValue(parseFloat(n));
+        setSuffix(s);
+    } else {
+        // If no number is found, display the value as is without animation
+        setPrefix(value);
+        setNumericValue(0);
+        setSuffix('');
+    }
+  }, [value]);
+
+  const animatedValue = useCountUp(numericValue);
+
+  const formatValue = (num: number) => {
+    // Handle decimals for 'k' values
+    if (suffix.toLowerCase().includes('k') && num < 1000) {
+        return num.toFixed(1);
+    }
+    return Math.round(num).toLocaleString();
+  };
+
   return (
-    <div className="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all card-enter" style={style}>
+    <div className="bg-white p-6 rounded-lg border border-slate-200 hover:shadow-xl hover:-translate-y-1.5 transition-all card-enter" style={style}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500 font-medium">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">
+            {numericValue > 0 ? `${prefix}${formatValue(animatedValue)}${suffix}` : value}
+          </p>
           {change && (
             <p className={`text-sm mt-2 font-semibold ${changeColor}`}>
               {change} this month

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { User, UserRole, Message, AgentStatus } from '../../types';
+import { User, UserRole, Message, AgentStatus, NotificationType } from '../../types';
 
 export const sendMessage = async (currentUser: User, { receiverId, text }: { receiverId: number, text: string }) => {
     const newMessage = await db.createRecord('messages', {
@@ -15,6 +15,7 @@ export const sendMessage = async (currentUser: User, { receiverId, text }: { rec
     // Create a notification for the receiver
     await db.createRecord('notifications', {
         userId: receiverId,
+        type: NotificationType.NEW_MESSAGE,
         message: `You have a new message from ${currentUser.name}.`,
         timestamp: new Date().toISOString(),
         isRead: false,
@@ -133,6 +134,7 @@ export const broadcastMessage = async (adminUser: User, { text }: { text: string
 
         await db.createRecord('notifications', {
             userId: recipient.id,
+            type: NotificationType.BROADCAST,
             message: `New broadcast message from ${adminUser.name}.`,
             timestamp: new Date().toISOString(),
             isRead: false,
