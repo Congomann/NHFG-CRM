@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { User, Message, UserRole } from '../types';
 import { PencilIcon, TrashIcon, BroadcastIcon, ArrowUpIcon } from './icons';
+import { useToast } from '../contexts/ToastContext';
 
 interface MessagingViewProps {
   currentUser: User;
@@ -14,6 +15,8 @@ interface MessagingViewProps {
   initialSelectedUserId?: number;
   onMarkConversationAsRead: (senderId: number) => void;
   onOpenBroadcast: () => void;
+  onTyping: () => void;
+  typingStatus: Record<number, boolean>;
 }
 
 // --- Helper Functions for iMessage UI ---
@@ -68,13 +71,14 @@ const formatTimestamp = (timestamp: string) => {
 };
 
 
-const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messages, onSendMessage, onEditMessage, onTrashMessage, initialSelectedUserId, onMarkConversationAsRead, onOpenBroadcast }) => {
+const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messages, onSendMessage, onEditMessage, onTrashMessage, initialSelectedUserId, onMarkConversationAsRead, onOpenBroadcast, onTyping, typingStatus }) => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(initialSelectedUserId || null);
   const [newMessage, setNewMessage] = useState('');
   const [editingMessage, setEditingMessage] = useState<{ id: number; text: string } | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const editInputRef = useRef<null | HTMLTextAreaElement>(null);
   const textareaRef = useRef<null | HTMLTextAreaElement>(null);
+  const { addToast } = useToast();
 
   const otherUsers = users.filter(u => u.id !== currentUser.id);
 
@@ -91,8 +95,16 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
   }, [selectedUserId, onMarkConversationAsRead, messages]);
 
   useEffect(() => {
+    if (editingMessage && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.style.height = 'auto';
+      editInputRef.current.style.height = `${editInputRef.current.scrollHeight}px`;
+    }
+  }, [editingMessage]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedUserId]);
+  }, [messages, selectedUserId, typingStatus]);
   
   const conversation = useMemo(() => messages.filter(
     msg =>
@@ -130,6 +142,28 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
       }
     }
   };
+  
+    const handleStartEdit = (message: Message) => {
+        const messageTime = new Date(message.timestamp).getTime();
+        const currentTime = new Date().getTime();
+        if ((currentTime - messageTime) > 2 * 60 * 1000) { // 2 minute edit window
+            addToast('Edit Error', 'You can only edit messages sent within the last 2 minutes.', 'warning');
+            return;
+        }
+        setEditingMessage({ id: message.id, text: message.text });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessage(null);
+    };
+
+    const handleSaveEdit = () => {
+        if (editingMessage && editingMessage.text.trim()) {
+            onEditMessage(editingMessage.id, editingMessage.text.trim());
+        }
+        setEditingMessage(null);
+    };
+
 
   const selectedUser = users.find(u => u.id === selectedUserId);
 
@@ -145,7 +179,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
         e.preventDefault();
         handleSendMessage(e as any);
     }
-};
+  };
 
   return (
     <div className="flex h-full bg-white">
@@ -209,7 +243,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                <h2 className="text-sm font-semibold text-slate-800 mt-1">{selectedUser.name}</h2>
             </div>
             <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-                <div className="flex flex-col space-y-1">
+                <div className="flex flex-col">
                     {conversation.map((msg, index) => {
                         const prevMsg = conversation[index - 1];
                         const nextMsg = conversation[index + 1];
@@ -221,29 +255,70 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                         const isLastInSequence = !nextMsg || nextMsg.senderId !== msg.senderId || !isSameDay(new Date(msg.timestamp), new Date(nextMsg.timestamp));
                         
                         const bubbleClasses = [
-                            'px-4 py-2 rounded-2xl max-w-md lg:max-w-xl break-words',
+                            'px-3.5 py-2 rounded-2xl max-w-md lg:max-w-xl break-words relative',
                             isMyMessage ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-900',
-                            isFirstInSequence && !isLastInSequence ? (isMyMessage ? 'rounded-br-md' : 'rounded-bl-md') : '',
-                            !isFirstInSequence && !isLastInSequence ? (isMyMessage ? 'rounded-r-md' : 'rounded-l-md') : '',
-                            !isFirstInSequence && isLastInSequence ? (isMyMessage ? 'rounded-tr-md' : 'rounded-tl-md') : '',
+                            isLastInSequence && isMyMessage ? 'rounded-br-md' : '',
+                            isLastInSequence && !isMyMessage ? 'rounded-bl-md' : '',
                         ].join(' ');
+                        
+                        const isEditingThis = editingMessage?.id === msg.id;
 
                         return (
                              <React.Fragment key={msg.id}>
                                 {showDateSeparator && <DateSeparator date={msg.timestamp} />}
-                                <div className={`flex items-end gap-2 ${isMyMessage ? 'justify-end' : 'justify-start'} ${isFirstInSequence ? 'mt-2' : 'mt-0.5'}`}>
+                                <div className={`flex items-start gap-2.5 group ${isMyMessage ? 'justify-end' : 'justify-start'} ${isFirstInSequence ? 'mt-2' : 'mt-0.5'}`}>
                                     {!isMyMessage && (
-                                        <div className="w-8 flex-shrink-0">
+                                        <div className="w-8 flex-shrink-0 self-end">
                                             {isLastInSequence && <img src={selectedUser.avatar} alt={selectedUser.name} className="w-8 h-8 rounded-full" />}
                                         </div>
                                     )}
-                                    <div className={bubbleClasses}>
-                                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                                    <div className={`flex items-center ${isMyMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        <div className={bubbleClasses}>
+                                            {isEditingThis ? (
+                                                <div className="w-80">
+                                                    <textarea
+                                                        ref={editInputRef}
+                                                        value={editingMessage.text}
+                                                        onChange={(e) => setEditingMessage(prev => prev ? { ...prev, text: e.target.value } : null)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                                                            if (e.key === 'Escape') { e.preventDefault(); handleCancelEdit(); }
+                                                        }}
+                                                        className="w-full bg-blue-600 text-white rounded-lg focus:outline-none resize-none"
+                                                        rows={1}
+                                                        onInput={handleTextareaInput}
+                                                    />
+                                                    <div className="text-xs text-blue-200 mt-1">
+                                                        <button onClick={handleSaveEdit} className="font-semibold hover:underline">Save</button> &middot; <button onClick={handleCancelEdit} className="hover:underline">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="whitespace-pre-wrap">{msg.text} {msg.edited && <span className="text-xs opacity-70 ml-1">(edited)</span>}</p>
+                                            )}
+                                        </div>
+                                        {isMyMessage && (
+                                            <div className="flex items-center self-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity px-2">
+                                                <button onClick={() => handleStartEdit(msg)} className="p-1.5 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-200" aria-label="Edit message"><PencilIcon className="w-4 h-4" /></button>
+                                                <button onClick={() => onTrashMessage(msg.id)} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-200" aria-label="Delete message"><TrashIcon className="w-4 h-4" /></button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </React.Fragment>
                         );
                     })}
+                     {typingStatus[selectedUserId] && selectedUser && (
+                        <div className="flex items-end gap-2 justify-start mt-2">
+                            <div className="w-8 flex-shrink-0">
+                                <img src={selectedUser.avatar} alt={selectedUser.name} className="w-8 h-8 rounded-full" />
+                            </div>
+                            <div className="px-4 py-3 rounded-2xl bg-slate-200 text-slate-900 flex items-center rounded-bl-md">
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                                <div className="typing-dot"></div>
+                            </div>
+                        </div>
+                    )}
                 </div>
                  {lastMyMessage && lastMyMessage.isRead && (
                     <div className="text-right text-xs text-slate-500 mt-1 pr-2">
@@ -257,7 +332,10 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                 <textarea
                   ref={textareaRef}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    onTyping();
+                  }}
                   onInput={handleTextareaInput}
                   onKeyDown={handleKeyDown}
                   placeholder={`Message ${selectedUser.name}`}

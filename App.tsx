@@ -76,6 +76,8 @@ const App: React.FC = () => {
   const [clientListAgentFilter, setClientListAgentFilter] = useState<Agent | null>(null);
   const [highlightedAgentId, setHighlightedAgentId] = useState<number | null>(null);
   const [impersonatedUserId, setImpersonatedUserId] = useState<number | null>(null);
+  const [typingStatus, setTypingStatus] = useState<Record<number, boolean>>({});
+  const typingTimeoutRef = useRef<Record<number, number>>({});
 
   useEffect(() => {
     const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'home';
@@ -105,6 +107,23 @@ const App: React.FC = () => {
   const handleNavigation = (view: string) => {
     window.location.hash = `/${view}`;
   };
+  
+  const handleTyping = () => {
+    if (!displayUser) return;
+
+    const currentUserId = displayUser.id;
+
+    if (typingTimeoutRef.current[currentUserId]) {
+        clearTimeout(typingTimeoutRef.current[currentUserId]);
+    }
+
+    setTypingStatus(prev => ({ ...prev, [currentUserId]: true }));
+
+    typingTimeoutRef.current[currentUserId] = window.setTimeout(() => {
+        setTypingStatus(prev => ({ ...prev, [currentUserId]: false }));
+    }, 3000); // User is considered "stopped typing" after 3 seconds of inactivity
+  };
+
 
   const handleNotificationClick = (notification: Notification) => {
     // This logic is now handled server-side and via state updates
@@ -259,7 +278,7 @@ const App: React.FC = () => {
     if (currentView.startsWith('messages')) {
         const preselectedId = currentView.split('/')[1];
         return <MessagingView 
-                    currentUser={currentUser}
+                    currentUser={displayUser}
                     users={users}
                     messages={messages}
                     onSendMessage={handlers.handleSendMessage}
@@ -270,6 +289,8 @@ const App: React.FC = () => {
                     onPermanentlyDeleteMessage={handlers.handlePermanentlyDeleteMessage}
                     onMarkConversationAsRead={handlers.handleMarkConversationAsRead}
                     onOpenBroadcast={() => setIsBroadcastModalOpen(true)}
+                    onTyping={handleTyping}
+                    typingStatus={typingStatus}
                 />;
     }
 

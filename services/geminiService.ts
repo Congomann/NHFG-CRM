@@ -54,18 +54,28 @@ const getRoleSpecificPrompt = (currentUser: User, allData: { clients: Client[], 
 
     switch(currentUser.role) {
         case UserRole.AGENT:
-            const agentClients = allData.clients.filter(c => c.agentId === currentUser.id).map(c => {
+            const agentClients = allData.clients.filter(c => c.agentId === currentUser.id);
+            const agentClientIds = new Set(agentClients.map(c => c.id));
+            const agentPolicies = allData.policies.filter(p => agentClientIds.has(p.clientId)).map(p => ({
+                clientId: p.clientId,
+                type: p.type,
+                status: p.status,
+                endDate: p.endDate
+            }));
+            const clientSummaryForPrompt = agentClients.map(c => {
                  const lastInteraction = allData.interactions.filter(i => i.clientId === c.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-                 const clientPolicies = allData.policies.filter(p => p.clientId === c.id).map(p => p.type);
-                 return { id: c.id, name: `${c.firstName} ${c.lastName}`, status: c.status, joinDate: c.joinDate, lastContact: lastInteraction?.date, policies: clientPolicies };
+                 const clientPolicyTypes = allData.policies.filter(p => p.clientId === c.id).map(p => p.type);
+                 return { id: c.id, name: `${c.firstName} ${c.lastName}`, status: c.status, joinDate: c.joinDate, lastContact: lastInteraction?.date, policies: clientPolicyTypes };
             });
+
             roleInstructions = `
-                You are an AI assistant for an insurance agent named ${currentUser.name}.
-                1.  Identify active clients who have not been contacted in over 30 days. Suggest a "CREATE_TASK" to follow up.
-                2.  Identify active clients with only one policy type. Suggest "DRAFT_EMAIL" to explore cross-selling another relevant policy.
-                3.  Identify leads that have not been contacted in over 7 days. Suggest a "CREATE_TASK".
+                You are an AI assistant for an insurance agent named ${currentUser.name}. Your goal is to provide actionable suggestions to help them manage their clients and policies effectively. Today's date is ${today}.
+                1.  **Policy Renewals:** Identify active policies that are expiring within the next 45 days. Suggest a "CREATE_TASK" to 'Initiate renewal process for [Client Name]'s [Policy Type] policy'. Set a high priority for policies expiring in under 15 days.
+                2.  **Client Follow-ups:** Identify active clients who have not been contacted in over 90 days. Suggest a "CREATE_TASK" to 'Check in with [Client Name]'.
+                3.  **Cross-sell Opportunities:** Identify active clients with only one policy type. Suggest "DRAFT_EMAIL" to explore cross-selling another relevant policy. Use a prompt like 'Draft an email to [Client Name] to discuss adding a [Complementary Policy Type] policy to their portfolio.'
+                4.  **Lead Nurturing:** Identify leads that have not been contacted in over 7 days. Suggest a "CREATE_TASK" to 'Follow up with lead [Lead Name]'.
             `;
-            dataPayload = { clients: agentClients };
+            dataPayload = { clients: clientSummaryForPrompt, policies: agentPolicies };
             break;
         case UserRole.SUB_ADMIN:
             const unassignedLeads = allData.clients.filter(c => c.status === 'Lead' && !c.agentId).map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}`, joinDate: c.joinDate }));
