@@ -31,67 +31,62 @@ const initDB = (): Promise<IDBDatabase> => {
 
         request.onupgradeneeded = (event) => {
             const db = request.result;
-            const transaction = request.transaction!;
             
-            // Define schema
+            // This function runs only when the DB is created for the first time or the version is upgraded.
+            // We will create the schema and seed the data within this single transaction
+            // to prevent race conditions.
+            
+            const seedFunctions: (() => void)[] = [];
+
             if (!db.objectStoreNames.contains(STORES.users)) {
-                const userStore = db.createObjectStore(STORES.users, { keyPath: 'id', autoIncrement: true });
-                userStore.createIndex('email', 'email', { unique: true });
+                const store = db.createObjectStore(STORES.users, { keyPath: 'id', autoIncrement: true });
+                store.createIndex('email', 'email', { unique: true });
+                seedFunctions.push(() => MOCK_USERS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.agents)) {
-                db.createObjectStore(STORES.agents, { keyPath: 'id' });
+                const store = db.createObjectStore(STORES.agents, { keyPath: 'id' });
+                seedFunctions.push(() => MOCK_AGENTS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.clients)) {
-                db.createObjectStore(STORES.clients, { keyPath: 'id', autoIncrement: true });
+                const store = db.createObjectStore(STORES.clients, { keyPath: 'id', autoIncrement: true });
+                seedFunctions.push(() => MOCK_CLIENTS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.policies)) {
-                db.createObjectStore(STORES.policies, { keyPath: 'id', autoIncrement: true });
+                const store = db.createObjectStore(STORES.policies, { keyPath: 'id', autoIncrement: true });
+                seedFunctions.push(() => MOCK_POLICIES.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.interactions)) {
-                 db.createObjectStore(STORES.interactions, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.interactions, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_INTERACTIONS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.tasks)) {
-                 db.createObjectStore(STORES.tasks, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.tasks, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_TASKS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.messages)) {
-                 db.createObjectStore(STORES.messages, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.messages, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_MESSAGES.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.licenses)) {
-                 db.createObjectStore(STORES.licenses, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.licenses, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_LICENSES.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.notifications)) {
-                db.createObjectStore(STORES.notifications, { keyPath: 'id', autoIncrement: true });
+                const store = db.createObjectStore(STORES.notifications, { keyPath: 'id', autoIncrement: true });
+                seedFunctions.push(() => MOCK_NOTIFICATIONS.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.calendarNotes)) {
-                 db.createObjectStore(STORES.calendarNotes, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.calendarNotes, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_CALENDAR_NOTES.forEach(item => store.add(item)));
             }
             if (!db.objectStoreNames.contains(STORES.testimonials)) {
-                 db.createObjectStore(STORES.testimonials, { keyPath: 'id', autoIncrement: true });
+                 const store = db.createObjectStore(STORES.testimonials, { keyPath: 'id', autoIncrement: true });
+                 seedFunctions.push(() => MOCK_TESTIMONIALS.forEach(item => store.add(item)));
             }
-            
-            // Seed data after schema is created
-            transaction.oncomplete = () => {
-                const seedDB = indexedDB.open(DB_NAME, DB_VERSION);
-                seedDB.onsuccess = () => {
-                    const db = seedDB.result;
-                    const seedTransaction = db.transaction(Object.values(STORES), 'readwrite');
-                    
-                    MOCK_USERS.forEach(item => seedTransaction.objectStore(STORES.users).add(item));
-                    MOCK_AGENTS.forEach(item => seedTransaction.objectStore(STORES.agents).add(item));
-                    MOCK_CLIENTS.forEach(item => seedTransaction.objectStore(STORES.clients).add(item));
-                    MOCK_POLICIES.forEach(item => seedTransaction.objectStore(STORES.policies).add(item));
-                    MOCK_INTERACTIONS.forEach(item => seedTransaction.objectStore(STORES.interactions).add(item));
-                    MOCK_TASKS.forEach(item => seedTransaction.objectStore(STORES.tasks).add(item));
-                    MOCK_MESSAGES.forEach(item => seedTransaction.objectStore(STORES.messages).add(item));
-                    MOCK_LICENSES.forEach(item => seedTransaction.objectStore(STORES.licenses).add(item));
-                    MOCK_NOTIFICATIONS.forEach(item => seedTransaction.objectStore(STORES.notifications).add(item));
-                    MOCK_CALENDAR_NOTES.forEach(item => seedTransaction.objectStore(STORES.calendarNotes).add(item));
-                    MOCK_TESTIMONIALS.forEach(item => seedTransaction.objectStore(STORES.testimonials).add(item));
-                    
-                    seedTransaction.oncomplete = () => console.log('Database seeded successfully.');
-                    seedTransaction.onerror = (e) => console.error('Error seeding database:', e);
-                }
-            }
+
+            // After defining schema, run all seed functions within this transaction
+            console.log('Database schema created. Seeding initial data...');
+            seedFunctions.forEach(fn => fn());
         };
     });
     return dbPromise;
@@ -204,4 +199,4 @@ export const db = {
 };
 
 // Ensure DB is initialized on load
-initDB();
+initDB().then(() => console.log("Database initialized.")).catch(err => console.error("Database initialization failed:", err));
