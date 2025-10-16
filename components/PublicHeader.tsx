@@ -10,7 +10,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ onNavigate }) => {
     <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b border-slate-200">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          <button onClick={() => onNavigate('home')} aria-label="Go to homepage">
+          <button onClick={() => onNavigate('home')} aria-label="Go to homepage" title="New Holland Financial Group Homepage">
             <CrmLogoIcon className="w-48" variant="light" />
           </button>
           <nav className="hidden lg:flex items-center space-x-8 text-sm font-semibold text-slate-700">

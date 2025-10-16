@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
       <div className="flex items-center justify-between mb-10 px-2">
         <CrmLogoIcon className="w-40" variant="dark" />
         <div className="relative">
-            <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-slate-400 hover:text-white relative">
+            <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="text-slate-400 hover:text-white relative" aria-label="Open notifications" title="Notifications">
                 <BellIcon className="w-6 h-6" />
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">{unreadCount}</span>}
             </button>

@@ -61,6 +61,7 @@ const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; o
                     onBlur={() => setTimeout(() => setIsMenuOpen(false), 150)}
                     className="p-1.5 rounded-full bg-slate-100 text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-primary-600 hover:text-white focus:opacity-100 transition-opacity z-10" 
                     aria-label="Policy Actions"
+                    title="Policy Actions"
                 >
                     <EllipsisVerticalIcon className="w-5 h-5" />
                 </button>

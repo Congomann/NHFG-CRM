@@ -117,6 +117,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
                     onClick={() => handleEditTaskClick(task)} 
                     className="text-slate-400 hover:text-primary-600 p-1"
                     aria-label={`Edit task: ${task.title}`}
+                    title="Edit task"
                 >
                     <PencilIcon className="w-5 h-5" />
                 </button>
@@ -128,6 +129,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
                     }}
                     className="text-slate-400 hover:text-rose-600 p-1"
                     aria-label={`Delete task: ${task.title}`}
+                    title="Delete task"
                 >
                     <TrashIcon className="w-5 h-5" />
                 </button>

@@ -131,7 +131,7 @@ const AgentLicenses: React.FC<AgentLicensesProps> = ({ agentId, licenses, onAddL
                                         <p className="text-sm text-slate-500">File: {lic.fileName}</p>
                                     )}
                                 </div>
-                                <button onClick={() => onDeleteLicense(lic.id)} className="text-slate-400 hover:text-rose-600"><TrashIcon /></button>
+                                <button onClick={() => onDeleteLicense(lic.id)} className="text-slate-400 hover:text-rose-600" aria-label="Delete license" title="Delete license"><TrashIcon /></button>
                             </div>
                             <div className="flex justify-between items-center mt-2 text-sm border-t border-slate-200 pt-2">
                                 <p>Expires: {lic.expirationDate}</p>

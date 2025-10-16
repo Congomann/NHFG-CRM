@@ -1,21 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as apiClient from '../services/apiClient';
-import { User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus } from '../types';
+import { AppData, User, Agent, Client, Policy, Interaction, Task, Message, ClientStatus, UserRole, InteractionType, AgentStatus, License, Notification, CalendarNote, Testimonial, TestimonialStatus } from '../types';
 import { useToast } from '../contexts/ToastContext';
-
-type AppData = {
-    users: User[];
-    agents: Agent[];
-    clients: Client[];
-    policies: Policy[];
-    interactions: Interaction[];
-    tasks: Task[];
-    messages: Message[];
-    licenses: License[];
-    notifications: Notification[];
-    calendarNotes: CalendarNote[];
-    testimonials: Testimonial[];
-};
 
 export const useDatabase = (currentUser: User | null) => {
     const [data, setData] = useState<AppData>({

@@ -298,8 +298,8 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                                         </div>
                                         {isMyMessage && (
                                             <div className="flex items-center self-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity px-2">
-                                                <button onClick={() => handleStartEdit(msg)} className="p-1.5 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-200" aria-label="Edit message"><PencilIcon className="w-4 h-4" /></button>
-                                                <button onClick={() => onTrashMessage(msg.id)} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-200" aria-label="Delete message"><TrashIcon className="w-4 h-4" /></button>
+                                                <button onClick={() => handleStartEdit(msg)} className="p-1.5 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-200" aria-label="Edit message" title="Edit message"><PencilIcon className="w-4 h-4" /></button>
+                                                <button onClick={() => onTrashMessage(msg.id)} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-full hover:bg-slate-200" aria-label="Delete message" title="Delete message"><TrashIcon className="w-4 h-4" /></button>
                                             </div>
                                         )}
                                     </div>
@@ -342,7 +342,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, users, messa
                   className="w-full px-4 py-2 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-[120px]"
                   rows={1}
                 />
-                <button type="submit" disabled={!newMessage.trim()} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${newMessage.trim() ? 'bg-blue-500 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}>
+                <button type="submit" disabled={!newMessage.trim()} className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${newMessage.trim() ? 'bg-blue-500 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} aria-label="Send message" title="Send message">
                     <ArrowUpIcon className="w-5 h-5"/>
                 </button>
               </form>

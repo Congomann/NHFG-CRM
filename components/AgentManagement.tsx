@@ -28,7 +28,7 @@ const TabButton: React.FC<{tabId: AgentTableTab, label: string, count: number, a
     </button>
 );
 
-const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emerald' | 'amber' | 'rose' | 'slate', ariaLabel: string }> = ({ onClick, text, color, ariaLabel }) => {
+const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emerald' | 'amber' | 'rose' | 'slate', ariaLabel: string, title?: string }> = ({ onClick, text, color, ariaLabel, title }) => {
     const colorClasses = {
         emerald: 'text-emerald-600 hover:text-emerald-800',
         amber: 'text-amber-600 hover:text-amber-800',
@@ -40,6 +40,7 @@ const ActionButton: React.FC<{ onClick: () => void, text: string, color: 'emeral
           onClick={onClick} 
           className={`font-medium ${colorClasses[color]} transition-colors`}
           aria-label={ariaLabel}
+          title={title || text}
       >
           {text}
       </button>
@@ -89,6 +90,7 @@ const ActiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number |
                         text="Deactivate"
                         color="amber"
                         ariaLabel={`Deactivate ${agent.name}`}
+                        title="Deactivate agent"
                     />
                 </td>
               </tr>
@@ -131,6 +133,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                             text="Reactivate"
                             color="emerald"
                             ariaLabel={`Reactivate ${agent.name}`}
+                            title="Reactivate agent"
                         />
                          <ActionButton
                             onClick={() => {
@@ -141,6 +144,7 @@ const InactiveAgentsTable: React.FC<{agents: Agent[], highlightedAgentId: number
                             text="Delete"
                             color="rose"
                             ariaLabel={`Permanently Delete ${agent.name}`}
+                            title="Delete agent permanently"
                         />
                     </div>
                 </td>
@@ -180,8 +184,9 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                             text="Approve"
                             color="emerald"
                             ariaLabel={`Approve ${agent.name}`}
+                            title="Approve application"
                         />
-                        <button onClick={() => onEditAgent(agent)} className="text-slate-500 hover:text-primary-600 transition-colors p-1" aria-label={`Edit ${agent.name}`}>
+                        <button onClick={() => onEditAgent(agent)} className="text-slate-500 hover:text-primary-600 transition-colors p-1" aria-label={`Edit ${agent.name}`} title={`Edit ${agent.name}`}>
                             <PencilIcon />
                         </button>
                         <ActionButton
@@ -193,6 +198,7 @@ const PendingAgentsTable: React.FC<{agents: Agent[], onEditAgent: (agent: Agent)
                             text="Reject"
                             color="rose"
                             ariaLabel={`Reject ${agent.name}`}
+                            title="Reject application"
                         />
                     </div>
                 </td>

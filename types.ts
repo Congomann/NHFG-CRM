@@ -251,3 +251,17 @@ export interface EmailDraft {
   subject: string;
   body: string;
 }
+
+export interface AppData {
+    users: User[];
+    agents: Agent[];
+    clients: Client[];
+    policies: Policy[];
+    interactions: Interaction[];
+    tasks: Task[];
+    messages: Message[];
+    licenses: License[];
+    notifications: Notification[];
+    calendarNotes: CalendarNote[];
+    testimonials: Testimonial[];
+}

@@ -92,13 +92,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, users, notes, 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-slate-800">Calendar</h1>
         <div className="flex items-center space-x-4">
-          <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-full hover:bg-slate-200">
+          <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-full hover:bg-slate-200" aria-label="Previous month" title="Previous month">
             <ChevronDownIcon className="w-5 h-5 rotate-90" />
           </button>
           <span className="text-xl font-bold text-slate-700 w-48 text-center">
             {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
           </span>
-          <button onClick={() => handleMonthChange(1)} className="p-2 rounded-full hover:bg-slate-200">
+          <button onClick={() => handleMonthChange(1)} className="p-2 rounded-full hover:bg-slate-200" aria-label="Next month" title="Next month">
             <ChevronDownIcon className="w-5 h-5 -rotate-90" />
           </button>
         </div>

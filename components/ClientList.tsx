@@ -72,6 +72,7 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
                 onClick={() => setSearchTerm('')}
                 className="p-1 rounded-full text-slate-400 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
                 aria-label="Clear search"
+                title="Clear search"
                 >
                 <CloseIcon className="h-4 w-4" />
                 </button>

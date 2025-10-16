@@ -25,7 +25,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose, onSend
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg m-4 modal-panel">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Broadcast Announcement</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Close modal" title="Close">
             <CloseIcon />
           </button>
         </div>

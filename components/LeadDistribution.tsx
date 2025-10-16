@@ -69,10 +69,10 @@ const LeadDistribution: React.FC<LeadDistributionProps> = ({ leads, onSelectLead
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{lead.joinDate}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-4">
-                    <button onClick={(e) => handleEdit(e, lead)} className="text-slate-400 hover:text-primary-600" aria-label={`Edit ${lead.firstName} ${lead.lastName}`}>
+                    <button onClick={(e) => handleEdit(e, lead)} className="text-slate-400 hover:text-primary-600" aria-label={`Edit ${lead.firstName} ${lead.lastName}`} title="Edit lead">
                       <PencilIcon />
                     </button>
-                    <button onClick={(e) => handleDelete(e, lead.id)} className="text-slate-400 hover:text-rose-600" aria-label={`Delete ${lead.firstName} ${lead.lastName}`}>
+                    <button onClick={(e) => handleDelete(e, lead.id)} className="text-slate-400 hover:text-rose-600" aria-label={`Delete ${lead.firstName} ${lead.lastName}`} title="Delete lead">
                       <TrashIcon />
                     </button>
                   </div>

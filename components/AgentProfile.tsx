@@ -70,9 +70,9 @@ const InsuranceServiceCard: React.FC<{ service: InsuranceService, index: number 
     );
 };
 
-const SocialLink: React.FC<{href?: string, icon: React.ReactNode}> = ({ href, icon }) => {
+const SocialLink: React.FC<{href?: string, icon: React.ReactNode, label: string}> = ({ href, icon, label }) => {
     if (!href) return null;
-    return <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-primary-400 transition-colors">{icon}</a>;
+    return <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-primary-400 transition-colors" aria-label={label} title={label}>{icon}</a>;
 };
 
 const TabButton: React.FC<{ tabId: string; label: string; activeTab: string; setActiveTab: (tabId: string) => void; }> = ({ tabId, label, activeTab, setActiveTab }) => (
@@ -364,13 +364,13 @@ const AgentProfile: React.FC<AgentProfileProps> = ({ agent, onAddLead, currentUs
                                 <div className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8">
                                     <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-6 text-center">Connect With Me On Social Media</h2>
                                     <div className="flex justify-center space-x-4 sm:space-x-6 text-3xl sm:text-4xl text-slate-500">
-                                        <SocialLink href={agent.socials.whatsapp} icon={<WhatsAppIcon />} />
-                                        <SocialLink href={agent.socials.linkedin} icon={<LinkedInIcon />} />
-                                        <SocialLink href={agent.socials.facebook} icon={<FacebookIcon />} />
-                                        <SocialLink href={agent.socials.tiktok} icon={<TikTokIcon />} />
-                                        <SocialLink href={agent.socials.instagram} icon={<InstagramIcon />} />
-                                        <SocialLink href={agent.socials.twitter} icon={<TwitterIcon />} />
-                                        <SocialLink href={agent.socials.snapchat} icon={<SnapchatIcon />} />
+                                        <SocialLink href={agent.socials.whatsapp} icon={<WhatsAppIcon />} label="WhatsApp" />
+                                        <SocialLink href={agent.socials.linkedin} icon={<LinkedInIcon />} label="LinkedIn" />
+                                        <SocialLink href={agent.socials.facebook} icon={<FacebookIcon />} label="Facebook" />
+                                        <SocialLink href={agent.socials.tiktok} icon={<TikTokIcon />} label="TikTok" />
+                                        <SocialLink href={agent.socials.instagram} icon={<InstagramIcon />} label="Instagram" />
+                                        <SocialLink href={agent.socials.twitter} icon={<TwitterIcon />} label="Twitter" />
+                                        <SocialLink href={agent.socials.snapchat} icon={<SnapchatIcon />} label="Snapchat" />
                                     </div>
                                 </div>
 

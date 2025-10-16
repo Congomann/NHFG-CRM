@@ -86,8 +86,8 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
                 </>
               ) : (
                 <>
-                  <button onClick={() => setEditingNote(note)} className="text-slate-500 hover:text-primary-600"><PencilIcon className="w-4 h-4" /></button>
-                  <button onClick={() => onDelete(note.id)} className="text-slate-500 hover:text-rose-600"><TrashIcon className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingNote(note)} className="text-slate-500 hover:text-primary-600" aria-label="Edit note" title="Edit note"><PencilIcon className="w-4 h-4" /></button>
+                  <button onClick={() => onDelete(note.id)} className="text-slate-500 hover:text-rose-600" aria-label="Delete note" title="Delete note"><TrashIcon className="w-4 h-4" /></button>
                 </>
               )}
             </div>
@@ -102,7 +102,7 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg m-4 modal-panel">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-slate-900">{formattedDate}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><CloseIcon /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Close modal" title="Close"><CloseIcon /></button>
         </div>
         
         <div className="space-y-3 max-h-60 overflow-y-auto pr-2 mb-4">
@@ -132,6 +132,7 @@ const CalendarNoteModal: React.FC<CalendarNoteModalProps> = ({ isOpen, onClose, 
                     onClick={() => setSelectedColor(color.name)}
                     className={`w-6 h-6 rounded-full ${color.bg} transition-transform hover:scale-110 ${selectedColor === color.name ? `ring-2 ${color.ring} ring-offset-2` : ''}`}
                     aria-label={`Select ${color.name} color`}
+                    title={color.name}
                   />
                 ))}
               </div>

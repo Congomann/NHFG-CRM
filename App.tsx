@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft } from './types';
+import { AppData, User, UserRole, Agent, AgentStatus, Client, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial, ClientStatus, TestimonialStatus, EmailDraft } from './types';
 import * as authService from './services/authService';
 import { useDatabase } from './hooks/useDatabase';
 import { useToast } from './contexts/ToastContext';
@@ -87,9 +87,22 @@ const App: React.FC = () => {
 
     const db = useDatabase(currentUser);
 
+    const displayUser = useMemo(() => {
+        if (!currentUser) return null;
+        if (impersonatedUserId === null) return currentUser;
+        return db.users.find(u => u.id === impersonatedUserId) || currentUser;
+    }, [impersonatedUserId, currentUser, db.users]);
+
     const handleNavigate = useCallback((path: string) => {
+        if (path === 'my-profile' && displayUser?.role === UserRole.AGENT) {
+            const agent = db.agents.find(a => a.id === displayUser.id);
+            if (agent) {
+                window.location.hash = `/agent/${agent.slug}`;
+                return;
+            }
+        }
         window.location.hash = `/${path}`;
-    }, []);
+    }, [displayUser, db.agents]);
 
     useEffect(() => {
         const handleHashChange = () => {
@@ -103,27 +116,37 @@ const App: React.FC = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    const displayUser = useMemo(() => {
-        if (!currentUser) return null;
-        if (impersonatedUserId === null) return currentUser;
-        return db.users.find(u => u.id === impersonatedUserId) || currentUser;
-    }, [impersonatedUserId, currentUser, db.users]);
+    const displayData: AppData = useMemo(() => {
+        const allData: AppData = {
+            users: db.users, agents: db.agents, clients: db.clients, policies: db.policies, 
+            interactions: db.interactions, tasks: db.tasks, messages: db.messages, 
+            licenses: db.licenses, notifications: db.notifications, 
+            calendarNotes: db.calendarNotes, testimonials: db.testimonials
+        };
 
-    const displayData = useMemo(() => {
-        if (!displayUser) return { clients: [], policies: [], tasks: [], interactions: [], licenses: [], testimonials: [] };
-
-        if (displayUser.role === UserRole.AGENT) {
-            const agentClientIds = new Set(db.clients.filter(c => c.agentId === displayUser.id).map(c => c.id));
+        if (!displayUser) {
             return {
-                clients: db.clients.filter(c => c.agentId === displayUser.id),
-                policies: db.policies.filter(p => agentClientIds.has(p.clientId)),
-                tasks: db.tasks.filter(t => t.agentId === displayUser.id || (t.clientId && agentClientIds.has(t.clientId))),
-                interactions: db.interactions.filter(i => agentClientIds.has(i.clientId)),
-                licenses: db.licenses.filter(l => l.agentId === displayUser.id),
-                testimonials: db.testimonials.filter(t => t.agentId === displayUser.id),
+                users: [], agents: [], clients: [], policies: [], interactions: [],
+                tasks: [], messages: [], licenses: [], notifications: [],
+                calendarNotes: [], testimonials: []
             };
         }
-        return db;
+    
+        if (displayUser.role === UserRole.AGENT) {
+            const agentClientIds = new Set(allData.clients.filter(c => c.agentId === displayUser.id).map(c => c.id));
+            
+            return {
+                ...allData,
+                clients: allData.clients.filter(c => c.agentId === displayUser.id),
+                policies: allData.policies.filter(p => agentClientIds.has(p.clientId)),
+                tasks: allData.tasks.filter(t => t.agentId === displayUser.id || (t.clientId && agentClientIds.has(t.clientId))),
+                interactions: allData.interactions.filter(i => agentClientIds.has(i.clientId)),
+                licenses: allData.licenses.filter(l => l.agentId === displayUser.id),
+                testimonials: allData.testimonials.filter(t => t.agentId === displayUser.id),
+            };
+        }
+        
+        return allData;
     }, [displayUser, db]);
 
     const handleOpenAddPolicyModal = (clientId: number) => {
@@ -160,8 +183,6 @@ const App: React.FC = () => {
     };
 
     const handleSaveLead = async (leadData: Client) => {
-        // FIX: The handler call was incorrect. For a new lead, handleAddClient takes one argument.
-        // For an existing lead, handleUpdateClient takes two.
         if (leadData.id) {
             await db.handlers.handleUpdateClient(leadData.id, leadData);
         } else {
@@ -234,44 +255,136 @@ const App: React.FC = () => {
             case 'commissions': return <CommissionsView currentUser={displayUser} agents={db.agents} policies={db.policies} clients={db.clients} onUpdatePolicy={db.handlers.handleUpdatePolicy} />;
             case 'messages': return <MessagingView currentUser={displayUser} users={db.users} messages={db.messages} onSendMessage={db.handlers.handleSendMessage} onEditMessage={db.handlers.handleEditMessage} onTrashMessage={db.handlers.handleTrashMessage} onRestoreMessage={db.handlers.handleRestoreMessage} onPermanentlyDeleteMessage={db.handlers.handlePermanentlyDeleteMessage} initialSelectedUserId={Number(viewParam)} onMarkConversationAsRead={db.handlers.handleMarkConversationAsRead} onOpenBroadcast={() => setIsBroadcastModalOpen(true)} onTyping={() => {}} typingStatus={{}} />;
             case 'calendar': return <CalendarView currentUser={displayUser} users={db.users} notes={db.calendarNotes} onSaveNote={db.handlers.handleSaveCalendarNote} onDeleteNote={db.handlers.handleDeleteCalendarNote} />;
-            case 'licenses': return <LicensesView agent={db.agents.find(a => a.id === displayUser.id)!} licenses={displayData.licenses} onAddLicense={db.handlers.handleAddLicense} onDeleteLicense={db.handlers.onDeleteLicense} />;
-            case 'testimonials': return <TestimonialsManagement testimonials={displayData.testimonials} onUpdateTestimonialStatus={async (id, status) => db.handlers.handleUpdateTestimonialStatus(id, status)} onDeleteTestimonial={async (id) => db.handlers.handleDeleteTestimonial(id)} onNavigate={handleNavigate} />;
-            case 'ai-assistant': return <AIAssistantView currentUser={displayUser} clients={db.clients} tasks={db.tasks} agents={db.agents} policies={db.policies} interactions={db.interactions} onSaveTask={db.handlers.handleSaveTask} onAssignLead={handleAIAssignLead} onNavigate={handleNavigate} />;
+            // FIX: Pass all required props to LicensesView and add a guard clause for the agent.
+            case 'licenses':
+                const agentForLicenses = db.agents.find(a => a.id === displayUser.id);
+                if (!agentForLicenses) return <div>Agent profile could not be found.</div>;
+                return <LicensesView
+                    agent={agentForLicenses}
+                    licenses={displayData.licenses}
+                    onAddLicense={db.handlers.handleAddLicense}
+                    onDeleteLicense={db.handlers.onDeleteLicense}
+                />;
+            case 'testimonials': return <TestimonialsManagement testimonials={displayData.testimonials} onUpdateTestimonialStatus={db.handlers.handleUpdateTestimonialStatus} onDeleteTestimonial={db.handlers.handleDeleteTestimonial} onNavigate={handleNavigate} />;
+            case 'ai-assistant': return <AIAssistantView currentUser={displayUser} clients={db.clients} tasks={db.tasks} agents={db.agents} policies={db.policies} interactions={db.interactions} onSaveTask={(task) => db.handlers.handleSaveTask({ ...task, agentId: displayUser.id })} onAssignLead={handleAIAssignLead} onNavigate={handleNavigate} />;
             
             // Public Pages
-            case 'home': return <PublicLayout onNavigate={handleNavigate}><HomePage onNavigate={handleNavigate} /></PublicLayout>;
-            case 'services': return <PublicLayout onNavigate={handleNavigate}><WebsiteStructureView /></PublicLayout>;
-            
-            default: return <Dashboard user={displayUser} clients={displayData.clients} policies={displayData.policies} tasks={displayData.tasks} agentsCount={db.agents.length} agents={db.agents} />;
+            case 'home': return <HomePage onNavigate={handleNavigate} />;
+            case 'services':
+            case 'about':
+            case 'contact':
+                return <WebsiteStructureView />; // Placeholder, assuming these are part of a larger component.
+
+            default: return <div>Page not found</div>;
         }
     };
-
-    const isPublicView = ['home', 'services', 'about', 'contact'].includes(view);
     
+    const isPublicView = ['home', 'services', 'about', 'contact'].includes(view);
+
     if (isPublicView) {
-        return renderView();
+        return (
+            <PublicLayout onNavigate={handleNavigate}>
+                {renderView()}
+            </PublicLayout>
+        );
     }
 
     return (
-        <div className="flex h-screen bg-background">
-            <Sidebar currentUser={displayUser} currentView={view} onNavigate={handleNavigate} onEditMyProfile={() => setIsEditMyProfileModalOpen(true)} notifications={db.notifications} onNotificationClick={(n) => { db.handlers.onMarkNotificationRead(n.id); handleNavigate(n.link); }} onClearAllNotifications={db.handlers.onMarkAllNotificationsRead} impersonatedRole={impersonatedUserId ? displayUser.role : null} onLogout={authService.logout} />
-            <main className="flex-1 ml-64 overflow-y-auto relative">
-                <DemoModeSwitcher adminUser={currentUser} subAdminUser={db.users.find(u => u.role === UserRole.SUB_ADMIN)} agents={db.agents.filter(a => a.status === AgentStatus.ACTIVE)} impersonatedUserId={impersonatedUserId} onSwitchUser={setImpersonatedUserId} />
-                <div className="pt-20">
-                    {renderView()}
-                </div>
+        <div className="flex bg-slate-50">
+            <Sidebar
+                currentView={view}
+                onNavigate={handleNavigate}
+                currentUser={displayUser}
+                onEditMyProfile={() => setIsEditMyProfileModalOpen(true)}
+                notifications={db.notifications}
+                onNotificationClick={(n) => {
+                    db.handlers.onMarkNotificationRead(n.id);
+                    handleNavigate(n.link);
+                }}
+                onClearAllNotifications={(userId) => db.handlers.onMarkAllNotificationsRead(userId)}
+                impersonatedRole={impersonatedUserId ? displayUser.role : null}
+                onLogout={() => {
+                    authService.logout();
+                    setCurrentUser(null);
+                    window.location.hash = '';
+                    window.location.reload();
+                }}
+            />
+            <main className="flex-1 ml-64 h-screen overflow-y-auto">
+                {currentUser.role === UserRole.ADMIN && (
+                    <DemoModeSwitcher
+                        adminUser={currentUser}
+                        subAdminUser={db.users.find(u => u.role === UserRole.SUB_ADMIN)}
+                        agents={db.agents.filter(a => a.status === AgentStatus.ACTIVE)}
+                        impersonatedUserId={impersonatedUserId}
+                        onSwitchUser={setImpersonatedUserId}
+                    />
+                )}
+                {renderView()}
             </main>
-            
-            {/* Modals */}
-            <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setIsAddClientModalOpen(false)} onAddClient={db.handlers.handleAddClient} />
-            <AddEditPolicyModal isOpen={isAddEditPolicyModalOpen} onClose={() => setIsAddEditPolicyModalOpen(false)} onSave={db.handlers.handleSavePolicy} policyToEdit={policyToEdit} clientId={policyClientId} />
-            <AddEditAgentModal isOpen={isAddEditAgentModalOpen} onClose={() => setIsAddEditAgentModalOpen(false)} onSave={handleSaveAgent} agentToEdit={agentToEdit} />
-            <EditMyProfileModal isOpen={isEditMyProfileModalOpen} onClose={() => setIsEditMyProfileModalOpen(false)} onSave={db.handlers.handleUpdateMyProfile} currentUser={displayUser} />
-            <AddEditLeadModal isOpen={isAddEditLeadModalOpen} onClose={() => setIsAddEditLeadModalOpen(false)} onSave={handleSaveLead} agents={db.agents} leadToEdit={leadToEdit} />
-            <BroadcastModal isOpen={isBroadcastModalOpen} onClose={() => setIsBroadcastModalOpen(false)} onSend={db.handlers.handleBroadcastMessage} />
 
-            <AddEditTaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} onSave={(task) => { db.handlers.handleSaveTask({ ...task, agentId: displayUser.id }); setIsTaskModalOpen(false); }} taskToEdit={taskToCreate} clients={db.clients} />
-            <DraftEmailModal isOpen={isEmailModalOpen} onClose={() => setIsEmailModalOpen(false)} draft={emailDraft} onSend={() => { setIsEmailModalOpen(false); addToast("Email Sent", `Your email to ${emailDraft?.clientName} has been sent successfully.`, "success"); }} />
+            <AddClientModal
+                isOpen={isAddClientModalOpen}
+                onClose={() => setIsAddClientModalOpen(false)}
+                onAddClient={db.handlers.handleAddClient}
+            />
+
+            <AddEditPolicyModal
+                isOpen={isAddEditPolicyModalOpen}
+                onClose={() => setIsAddEditPolicyModalOpen(false)}
+                onSave={db.handlers.handleSavePolicy}
+                policyToEdit={policyToEdit}
+                clientId={policyClientId}
+            />
+            
+            <AddEditAgentModal
+                isOpen={isAddEditAgentModalOpen}
+                onClose={() => setIsAddEditAgentModalOpen(false)}
+                onSave={handleSaveAgent}
+                agentToEdit={agentToEdit}
+            />
+
+            <EditMyProfileModal
+                isOpen={isEditMyProfileModalOpen}
+                onClose={() => setIsEditMyProfileModalOpen(false)}
+                onSave={db.handlers.handleUpdateMyProfile}
+                currentUser={displayUser}
+            />
+            
+             <AddEditLeadModal
+                isOpen={isAddEditLeadModalOpen}
+                onClose={() => setIsAddEditLeadModalOpen(false)}
+                onSave={handleSaveLead}
+                agents={db.agents.filter(a => a.status === AgentStatus.ACTIVE)}
+                leadToEdit={leadToEdit}
+            />
+
+            <BroadcastModal
+                isOpen={isBroadcastModalOpen}
+                onClose={() => setIsBroadcastModalOpen(false)}
+                onSend={db.handlers.handleBroadcastMessage}
+            />
+            
+            <AddEditTaskModal
+                isOpen={isTaskModalOpen}
+                onClose={() => setIsTaskModalOpen(false)}
+                onSave={(task) => {
+                    db.handlers.handleSaveTask({...task, agentId: displayUser.id});
+                    setIsTaskModalOpen(false);
+                }}
+                taskToEdit={taskToCreate}
+                clients={displayData.clients}
+            />
+
+            <DraftEmailModal
+                isOpen={isEmailModalOpen}
+                onClose={() => setIsEmailModalOpen(false)}
+                draft={emailDraft}
+                onSend={() => {
+                    setIsEmailModalOpen(false);
+                    addToast("Email Sent", `Your email to ${emailDraft?.clientName} has been sent successfully.`, "success");
+                }}
+            />
         </div>
     );
 };
