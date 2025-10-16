@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { User, UserRole, Message, AgentStatus, NotificationType } from '../../types';
+import { User, UserRole, Message, AgentStatus, NotificationType, Notification } from '../../types';
 
 export const sendMessage = async (currentUser: User, { receiverId, text }: { receiverId: number, text: string }) => {
     const newMessage = await db.createRecord('messages', {
@@ -37,7 +37,6 @@ export const editMessage = async (currentUser: User, messageId: number, { text }
         throw { status: 403, message: 'Edit time window has expired.' };
     }
 
-    // FIX: Explicitly provide the generic type to ensure type safety.
     return await db.updateRecord<Message>('messages', messageId, { text, edited: true });
 };
 
@@ -50,16 +49,14 @@ export const trashMessage = async (currentUser: User, messageId: number) => {
     const isReceiver = message.receiverId === currentUser.id;
     const isAdmin = currentUser.role === UserRole.ADMIN;
     
-    // Check general permission first
     if (!isSender && !isReceiver && !isAdmin) {
         throw { status: 403, message: 'You are not authorized to perform this action.' };
     }
 
     const messageTime = new Date(message.timestamp).getTime();
     const currentTime = new Date().getTime();
-    const isRecent = (currentTime - messageTime) < 24 * 60 * 60 * 1000; // 24-hour window for "unsend"
+    const isRecent = (currentTime - messageTime) < 24 * 60 * 60 * 1000;
 
-    // "Unsend" logic: If the sender deletes a recent message, it's deleted for everyone.
     if (isSender && isRecent) {
         const success = await db.deleteRecord('messages', messageId);
         if (!success) {
@@ -68,7 +65,6 @@ export const trashMessage = async (currentUser: User, messageId: number) => {
         return { success, action: 'deleted_for_everyone' };
     }
 
-    // "Delete for me" logic for all other cases (receiver deletes, sender deletes old message, admin deletes)
     return await db.updateRecord<Message>('messages', messageId, { 
         status: 'trashed', 
         deletedTimestamp: new Date().toISOString(),
@@ -85,7 +81,6 @@ export const restoreMessage = async (currentUser: User, messageId: number) => {
          throw { status: 403, message: 'You are not authorized to restore this message.' };
     }
 
-    // FIX: Explicitly provide the generic type to ensure type safety.
     return await db.updateRecord<Message>('messages', messageId, { 
         status: 'active', 
         deletedTimestamp: undefined, 
@@ -162,5 +157,18 @@ export const markConversationAsRead = async (currentUser: User, { senderId }: { 
         }
     }
 
+    return { success: true, updatedCount };
+};
+
+export const markAllNotificationsRead = async (userId: number) => {
+    const allNotifications = await db.getAll('notifications') as Notification[];
+    let updatedCount = 0;
+
+    for (const notification of allNotifications) {
+        if (notification.userId === userId && !notification.isRead) {
+            await db.updateRecord<Notification>('notifications', notification.id, { isRead: true });
+            updatedCount++;
+        }
+    }
     return { success: true, updatedCount };
 };

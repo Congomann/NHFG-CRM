@@ -10,7 +10,6 @@ import { User, UserRole, Policy, Interaction, Task, Message, License, Notificati
 
 const SIMULATED_LATENCY = 0; // ms
 
-// A simple routing function to handle protected resources
 const handleProtectedRequest = async (method: string, path: string, body: any, currentUser: User) => {
     // Agent-specific business logic
     const approveAgentMatch = path.match(/^\/api\/agents\/(\d+)\/approve$/);
@@ -55,7 +54,10 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
         }
     }
     
-    // Simple CRUD operations
+    if (path === '/api/notifications/mark-all-read' && method === 'PUT') {
+        return await messagesController.markAllNotificationsRead(body.userId);
+    }
+    
     const resourceMatch = path.match(/^\/api\/([a-zA-Z0-9]+)(?:\/(\d+))?$/);
     if (resourceMatch) {
         const [, resource, idStr] = resourceMatch;
@@ -75,6 +77,21 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
 
         if (method === 'POST') {
             if (currentUser.role === UserRole.AGENT && resource === 'clients') body.agentId = currentUser.id;
+            // When admin adds an agent, it goes through registration flow now.
+            if (resource === 'agents' && currentUser.role === UserRole.ADMIN) {
+                const existingUser = await db.users.findByEmail(body.email);
+                if (existingUser) throw { status: 409, message: 'An account with this email already exists.' };
+                
+                const agentUser = await authController.register({
+                    name: body.name,
+                    email: body.email,
+                    password: 'password123', // Default password
+                    role: UserRole.AGENT,
+                });
+                const newAgent = await db.agents.findById(agentUser.user.id);
+                if (!newAgent) throw { status: 500, message: "Failed to create agent profile."};
+                return await db.updateRecord('agents', newAgent.id, body);
+            }
             return await db.createRecord(resource, body);
         }
         if (method === 'PUT' && id) {
@@ -85,7 +102,6 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
         }
     }
     
-    // Fallback for initial data load
     if (path === '/api/data' && method === 'GET') {
         return await dataController.getAllData(currentUser);
     }
@@ -93,20 +109,17 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
     throw { status: 404, message: 'API endpoint not found' };
 };
 
-// This function simulates an API server handling a request.
 export const handleRequest = async (method: string, path: string, body?: any, headers?: any) => {
   return new Promise(async (resolve, reject) => {
     setTimeout(async () => {
       try {
         console.log(`[API Request] ${method} ${path}`, { body });
 
-        // --- AUTH ROUTES (Public) ---
         if (path.startsWith('/api/auth')) {
           if (path === '/api/auth/login' && method === 'POST') return resolve(await authController.login(body));
           if (path === '/api/auth/register' && method === 'POST') return resolve(await authController.register(body));
           if (path === '/api/auth/verify' && method === 'POST') return resolve(await authController.verifyEmail(body));
           
-          // --- Me Route (Protected Auth Route) ---
           if (path === '/api/auth/me' && method === 'GET') {
             const token = headers?.Authorization?.split(' ')[1];
             if (!token) return reject({ status: 401, message: 'No token provided' });
@@ -123,7 +136,6 @@ export const handleRequest = async (method: string, path: string, body?: any, he
           return reject({ status: 404, message: 'Auth endpoint not found' });
         }
         
-        // --- PROTECTED ROUTES ---
         const token = headers?.Authorization?.split(' ')[1];
         if (!token) return reject({ status: 401, message: 'No token provided' });
         
@@ -133,7 +145,6 @@ export const handleRequest = async (method: string, path: string, body?: any, he
         const currentUser = await db.users.findById(payload.id);
         if (!currentUser) return reject({ status: 401, message: 'User not found' });
 
-        // Delegate to the protected route handler
         resolve(await handleProtectedRequest(method, path, body, currentUser));
 
       } catch (error: any) {

@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { initDB } from './server/db';
+import { ToastProvider } from './contexts/ToastContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -22,7 +23,9 @@ initDB().then(() => {
     console.log("Database initialized successfully, rendering application.");
     root.render(
       <React.StrictMode>
-        <App />
+        <ToastProvider>
+            <App />
+        </ToastProvider>
       </React.StrictMode>
     );
 }).catch(error => {

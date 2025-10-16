@@ -24,6 +24,13 @@ export const del = async <T>(path: string): Promise<T> => {
     return handleRequest('DELETE', path, undefined, getAuthHeaders()) as Promise<T>;
 };
 
+// --- Auth Method ---
+export const register = async (userData: Omit<User, 'id' | 'title' | 'avatar'>): Promise<{ user: User }> => {
+    // This is a public route, so no auth headers
+    return handleRequest('POST', '/api/auth/register', userData) as Promise<{ user: User }>;
+};
+
+
 // --- Message Methods ---
 export const sendMessage = (receiverId: number, text: string): Promise<Message> => {
     return post<Message>('/api/messages', { receiverId, text });

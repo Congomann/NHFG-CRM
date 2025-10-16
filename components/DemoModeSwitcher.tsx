@@ -17,8 +17,10 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
     return impersonatedUserId === userId;
   };
 
+  const currentAgentName = agents.find(a => a.id === impersonatedUserId)?.name.split(' ')[0] || 'Agents';
+
   return (
-    <div className="sticky top-4 z-40 mx-auto max-w-max">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40">
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-2 flex items-center space-x-2 shadow-2xl border border-white/10">
             <div className="flex items-center text-white font-bold px-3">
                 <EyeIcon className="w-5 h-5 mr-2 text-primary-400" />
@@ -53,7 +55,8 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
 
             <div className="relative">
               <button
-                onClick={() => setIsAgentDropdownOpen(prev => !prev)}
+                onMouseEnter={() => setIsAgentDropdownOpen(true)}
+                onMouseLeave={() => setIsAgentDropdownOpen(false)}
                 className={`flex items-center px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
                   agents.some(a => a.id === impersonatedUserId)
                     ? 'bg-white text-primary-600 shadow-md'
@@ -61,13 +64,14 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
                 }`}
               >
                 <UsersIcon className="w-5 h-5 mr-2" />
-                Agents
+                {currentAgentName}
                 <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isAgentDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {isAgentDropdownOpen && (
                 <div 
-                  className="absolute top-full mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10 py-1"
+                  onMouseEnter={() => setIsAgentDropdownOpen(true)}
                   onMouseLeave={() => setIsAgentDropdownOpen(false)}
+                  className="absolute top-full mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10 py-1 max-h-60 overflow-y-auto"
                 >
                   {agents.map(agent => (
                     <a

@@ -36,8 +36,6 @@ export const useDatabase = (currentUser: User | null) => {
         try {
             const appData = await apiClient.get<AppData>('/api/data');
             setData(currentData => {
-                // Prevent unnecessary re-renders by comparing new data with current data.
-                // This stops the "blinking" UI effect caused by the polling interval.
                 if (JSON.stringify(currentData) === JSON.stringify(appData)) {
                     return currentData;
                 }
@@ -53,35 +51,52 @@ export const useDatabase = (currentUser: User | null) => {
 
     useEffect(() => {
         if (isLoggedIn) {
-            fetchData(false); // Initial fetch with loader
+            fetchData(false);
 
             const intervalId = setInterval(() => {
-                fetchData(true); // Subsequent polling fetches without loader
-            }, 1500); // Poll every 1.5 seconds
+                fetchData(true); 
+            }, 1500);
 
-            return () => clearInterval(intervalId); // Cleanup on unmount
+            return () => clearInterval(intervalId);
         }
     }, [isLoggedIn, fetchData]);
     
-    // Generic wrapper for API calls that handles state updates and notifications
     const handleApiCall = async (
         apiCall: () => Promise<any>,
         successTitle: string,
         successMessage: string
     ) => {
         try {
-            await apiCall();
+            const result = await apiCall();
             if (successTitle || successMessage) {
                 addToast(successTitle, successMessage, 'success');
             }
-            await fetchData(true); // Refetch data without loader to ensure UI is in sync
+            await fetchData(true);
+            return result;
         } catch (error: any) {
             addToast('Error', error.message || 'An unexpected error occurred.', 'error');
+            throw error;
         }
     };
     
     const handlers = {
-        // Simple CRUD handlers that now use the generic wrapper
+        onRegister: (userData: Omit<User, 'id' | 'title' | 'avatar'>) => handleApiCall(
+            () => apiClient.register(userData), 'Registration Submitted', 'Your application is pending approval.'
+        ),
+        onUpdateAgentProfile: (agentData: Agent) => handleApiCall(
+            () => apiClient.put(`/api/agents/${agentData.id}`, agentData),
+            'Profile Updated', 'Agent profile has been saved.'
+        ),
+        onMarkNotificationRead: (id: number) => handleApiCall(
+            () => apiClient.put(`/api/notifications/${id}`, { isRead: true }), '', ''
+        ),
+        onMarkAllNotificationsRead: (userId: number) => handleApiCall(
+            () => apiClient.put(`/api/notifications/mark-all-read`, { userId }), '', ''
+        ),
+        onAddTestimonial: (testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => handleApiCall(
+            () => apiClient.post('/api/testimonials', testimonialData),
+            'Testimonial Submitted', 'Thank you! Your testimonial is pending approval.'
+        ),
         handleAddClient: (clientData: Omit<Client, 'id'>) => handleApiCall(
             () => apiClient.post('/api/clients', clientData),
             'Client Added', 'New client has been successfully created.'
@@ -147,114 +162,42 @@ export const useDatabase = (currentUser: User | null) => {
         ),
         handleSendMessage: async (receiverId: number, text: string) => {
             if (!currentUser) return;
-
             const tempId = -Date.now();
-            const tempMessage: Message = {
-                id: tempId,
-                senderId: currentUser.id,
-                receiverId: receiverId,
-                text: text,
-                timestamp: new Date().toISOString(),
-                status: 'active',
-                source: 'internal',
-                isRead: true, // Read by sender
-            };
-
-            // Optimistic update
-            setData(prevData => ({
-                ...prevData,
-                messages: [...prevData.messages, tempMessage],
-            }));
+            const tempMessage: Message = { id: tempId, senderId: currentUser.id, receiverId: receiverId, text: text, timestamp: new Date().toISOString(), status: 'active', source: 'internal', isRead: true };
+            setData(prevData => ({ ...prevData, messages: [...prevData.messages, tempMessage] }));
 
             try {
-                // The API call returns the message with its real ID from the DB
                 const savedMessage = await apiClient.sendMessage(receiverId, text);
-                
-                // Replace the temporary message with the saved one robustly
                 setData(prevData => {
-                    // Filter out the temp message by ID, then add the real one from the server.
                     const finalMessages = prevData.messages.filter(m => m.id !== tempId);
                     finalMessages.push(savedMessage);
-                    // Re-sort to ensure chronological order is maintained, which is crucial for the UI.
                     finalMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-                    return {
-                        ...prevData,
-                        messages: finalMessages,
-                    };
+                    return { ...prevData, messages: finalMessages };
                 });
             } catch (error: any) {
                 addToast('Error', error.message || 'Failed to send message.', 'error');
-                // On error, revert the optimistic update by removing the temporary message
-                setData(prevData => ({
-                    ...prevData,
-                    messages: prevData.messages.filter(m => m.id !== tempId),
-                }));
+                setData(prevData => ({ ...prevData, messages: prevData.messages.filter(m => m.id !== tempId) }));
             }
         },
-        handleEditMessage: (messageId: number, text: string) => handleApiCall(
-            () => apiClient.editMessage(messageId, text),
-            'Message Edited', 'Your message has been updated.'
-        ),
-        handleTrashMessage: (messageId: number) => handleApiCall(
-            () => apiClient.trashMessage(messageId),
-            'Message Trashed', 'The message has been moved to the trash.'
-        ),
-        handleRestoreMessage: (messageId: number) => handleApiCall(
-            () => apiClient.restoreMessage(messageId),
-            'Message Restored', 'The message has been moved back to the inbox.'
-        ),
-        handlePermanentlyDeleteMessage: (messageId: number) => handleApiCall(
-            () => apiClient.permanentlyDeleteMessage(messageId),
-            'Message Deleted', 'The message has been permanently deleted.'
-        ),
-        handleBroadcastMessage: (text: string) => handleApiCall(
-            () => apiClient.broadcastMessage(text),
-            'Broadcast Sent', 'Your message has been sent to all active users.'
-        ),
-        handleMarkConversationAsRead: (senderId: number) => handleApiCall(
-            () => apiClient.markConversationAsRead(senderId),
-            '', '' // No toast for this action
-        ),
-
-        // Complex handlers that call specific apiClient methods
-        handleUpdateClientStatus: (id: number, status: ClientStatus) => handleApiCall(
-            () => apiClient.put(`/api/clients/${id}`, { status }),
-            'Client Status Updated', `Client is now marked as ${status}.`
-        ),
-        handleApproveAgent: (agentId: number, role: UserRole) => handleApiCall(
-            () => apiClient.approveAgent(agentId, role),
-            'Agent Approved', 'The agent account has been activated.'
-        ),
-        handleDeactivateAgent: (id: number) => handleApiCall(
-            () => apiClient.updateAgentStatus(id, AgentStatus.INACTIVE),
-            'Agent Deactivated', 'The agent account is now inactive.'
-        ),
-        handleReactivateAgent: (id: number) => handleApiCall(
-            () => apiClient.updateAgentStatus(id, AgentStatus.ACTIVE),
-            'Agent Reactivated', 'The agent account has been reactivated.'
-        ),
-        handleRejectAgent: (id: number) => handleApiCall(
-            () => apiClient.updateAgentStatus(id, AgentStatus.INACTIVE),
-            'Agent Rejected', 'The agent application has been rejected.'
-        ),
-        handleDeleteAgent: (id: number) => handleApiCall(
-            () => apiClient.deleteAgent(id),
-            'Agent Deleted', 'The agent and their user account have been permanently deleted.'
-        ),
+        handleEditMessage: (messageId: number, text: string) => handleApiCall(() => apiClient.editMessage(messageId, text), 'Message Edited', 'Your message has been updated.'),
+        handleTrashMessage: (messageId: number) => handleApiCall(() => apiClient.trashMessage(messageId), 'Message Trashed', 'The message has been moved to the trash.'),
+        handleRestoreMessage: (messageId: number) => handleApiCall(() => apiClient.restoreMessage(messageId), 'Message Restored', 'The message has been moved back to the inbox.'),
+        handlePermanentlyDeleteMessage: (messageId: number) => handleApiCall(() => apiClient.permanentlyDeleteMessage(messageId), 'Message Deleted', 'The message has been permanently deleted.'),
+        handleBroadcastMessage: (text: string) => handleApiCall(() => apiClient.broadcastMessage(text), 'Broadcast Sent', 'Your message has been sent to all active users.'),
+        handleMarkConversationAsRead: (senderId: number) => handleApiCall(() => apiClient.markConversationAsRead(senderId), '', ''),
+        handleUpdateClientStatus: (id: number, status: ClientStatus) => handleApiCall(() => apiClient.put(`/api/clients/${id}`, { status }), 'Client Status Updated', `Client is now marked as ${status}.`),
+        handleApproveAgent: (agentId: number, role: UserRole) => handleApiCall(() => apiClient.approveAgent(agentId, role), 'Agent Approved', 'The agent account has been activated.'),
+        handleDeactivateAgent: (id: number) => handleApiCall(() => apiClient.updateAgentStatus(id, AgentStatus.INACTIVE), 'Agent Deactivated', 'The agent account is now inactive.'),
+        handleReactivateAgent: (id: number) => handleApiCall(() => apiClient.updateAgentStatus(id, AgentStatus.ACTIVE), 'Agent Reactivated', 'The agent account has been reactivated.'),
+        handleRejectAgent: (id: number) => handleApiCall(() => apiClient.updateAgentStatus(id, AgentStatus.INACTIVE), 'Agent Rejected', 'The agent application has been rejected.'),
+        handleDeleteAgent: (id: number) => handleApiCall(() => apiClient.deleteAgent(id), 'Agent Deleted', 'The agent and their user account have been permanently deleted.'),
         handleUpdateMyProfile: async (user: User) => {
-            await handleApiCall(
-                () => apiClient.updateMyProfile(user),
-                'Profile Updated', 'Your profile has been saved successfully.'
-            );
+            await handleApiCall(() => apiClient.updateMyProfile(user), 'Profile Updated', 'Your profile has been saved successfully.');
         },
         handleAddLeadFromProfile: async (leadData: any, agentId: number) => {
-            // This handler is special because it's called from a public page,
-            // so the success message is different.
             try {
                 await apiClient.createLeadFromProfile(leadData, agentId);
                 addToast('Message Sent!', 'The agent will review your message and contact you shortly.', 'success');
-                // No refetch needed as the public user doesn't see the result.
             } catch (error: any) {
                 addToast('Error', error.message || 'Could not send message.', 'error');
             }
