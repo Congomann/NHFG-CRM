@@ -60,6 +60,7 @@ export enum NotificationType {
   TASK_DUE = 'task_due',
   AGENT_APPROVED = 'agent_approved',
   BROADCAST = 'broadcast',
+  POLICY_RENEWAL = 'policy_renewal',
   GENERIC = 'generic',
 }
 

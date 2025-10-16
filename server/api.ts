@@ -3,6 +3,7 @@ import * as agentsController from './controllers/agentsController';
 import * as leadsController from './controllers/leadsController';
 import * as usersController from './controllers/usersController';
 import * as messagesController from './controllers/messagesController';
+import * as dataController from './controllers/dataController';
 import * as auth from './auth';
 import { db } from './db';
 import { User, UserRole, Policy, Interaction, Task, Message, License, Notification, CalendarNote, Testimonial } from '../types';
@@ -86,29 +87,7 @@ const handleProtectedRequest = async (method: string, path: string, body: any, c
     
     // Fallback for initial data load
     if (path === '/api/data' && method === 'GET') {
-        const [
-            users, agents, clients, policies, interactions, tasks, messages,
-            licenses, notifications, calendarNotes, testimonials
-        ] = await Promise.all([
-            db.users.find(), db.agents.find(), db.clients.find(),
-            db.getAll('policies'), db.getAll('interactions'), db.getAll('tasks'),
-            db.getAll('messages'), db.getAll('licenses'), db.getAll('notifications'),
-            db.getAll('calendarNotes'), db.getAll('testimonials')
-        ]);
-
-        const allData = {
-            users: users.map(({ password, ...u }) => u),
-            agents, clients, policies, interactions, tasks, messages,
-            licenses, notifications, calendarNotes, testimonials
-        };
-        
-        if (currentUser.role === UserRole.AGENT) {
-            const agentClientIds = new Set(allData.clients.filter(c => c.agentId === currentUser.id).map(c => c.id));
-            allData.clients = allData.clients.filter(c => c.agentId === currentUser.id);
-            allData.policies = allData.policies.filter((p: Policy) => agentClientIds.has(p.clientId));
-            // further filtering can be added
-        }
-        return allData;
+        return await dataController.getAllData(currentUser);
     }
 
     throw { status: 404, message: 'API endpoint not found' };
@@ -126,6 +105,21 @@ export const handleRequest = async (method: string, path: string, body?: any, he
           if (path === '/api/auth/login' && method === 'POST') return resolve(await authController.login(body));
           if (path === '/api/auth/register' && method === 'POST') return resolve(await authController.register(body));
           if (path === '/api/auth/verify' && method === 'POST') return resolve(await authController.verifyEmail(body));
+          
+          // --- Me Route (Protected Auth Route) ---
+          if (path === '/api/auth/me' && method === 'GET') {
+            const token = headers?.Authorization?.split(' ')[1];
+            if (!token) return reject({ status: 401, message: 'No token provided' });
+            
+            const payload = auth.verify(token);
+            if (!payload) return reject({ status: 401, message: 'Invalid token' });
+
+            const currentUser = await db.users.findById(payload.id);
+            if (!currentUser) return reject({ status: 401, message: 'User not found' });
+            
+            return resolve(await authController.getMe(currentUser));
+          }
+          
           return reject({ status: 404, message: 'Auth endpoint not found' });
         }
         
@@ -144,7 +138,7 @@ export const handleRequest = async (method: string, path: string, body?: any, he
 
       } catch (error: any) {
         console.error(`[API Error] ${method} ${path}`, error);
-        reject({ status: error.status || 500, message: error.message, ...(error.requiresVerification && {requiresVerification: true, user: error.user}) });
+        reject({ status: error.status || 500, message: error.message, ...(error.requiresVerification && {requiresVerification: true, user: error.user}), ...(error.requiresApproval && {requiresApproval: true, user: error.user}) });
       }
     }, SIMULATED_LATENCY);
   });

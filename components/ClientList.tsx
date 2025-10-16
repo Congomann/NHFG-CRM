@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Client, ClientStatus, Agent } from '../types';
-import { PlusIcon, CloseIcon } from './icons';
+import { PlusIcon, CloseIcon, SearchIcon } from './icons';
 
 interface ClientListProps {
   title: string;
@@ -54,18 +54,34 @@ const ClientList: React.FC<ClientListProps> = ({ title, clients, onSelectClient,
         </div>
       )}
 
-      <div className="mb-6 flex space-x-4">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full md:w-1/3 px-4 py-2 border border-slate-300 rounded-md"
-        />
+      <div className="mb-6 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+        <div className="relative w-full md:w-1/3">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <SearchIcon className="h-5 w-5 text-slate-400" />
+            </div>
+            <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            {searchTerm && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                onClick={() => setSearchTerm('')}
+                className="p-1 rounded-full text-slate-400 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                aria-label="Clear search"
+                >
+                <CloseIcon className="h-4 w-4" />
+                </button>
+            </div>
+            )}
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ClientStatus | 'all')}
-          className="px-4 py-2 border border-slate-300 rounded-md bg-white"
+          className="px-4 py-2 border border-slate-300 rounded-md bg-white w-full sm:w-auto"
         >
           <option value="all">All Statuses</option>
           {Object.values(ClientStatus).map(s => <option key={s} value={s}>{s}</option>)}

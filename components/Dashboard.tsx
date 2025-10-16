@@ -4,6 +4,7 @@ import { ClientsIcon, DashboardIcon, TasksIcon } from './icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Client, Policy, PolicyType, Task, User, UserRole, Agent, ClientStatus } from '../types';
 import AgentPerformanceDetail from './AgentPerformanceDetail';
+import AgentPerformanceMetrics from './AgentPerformanceMetrics';
 
 interface DashboardProps {
     user: User;
@@ -106,18 +107,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
 
     return (
         <div className="p-8">
-            <h1 className="text-3xl font-extrabold text-slate-800 mb-8">{user.role} Dashboard</h1>
+            <h1 className="text-3xl font.extrabold text-slate-800 mb-8">{user.role} Dashboard</h1>
             {renderSummaryCards()}
 
             {user.role === UserRole.AGENT && currentAgent && (
-                <div className="bg-white p-6 rounded-lg border border-slate-200 mb-8 card-enter" style={{ animationDelay: '0.5s' }}>
-                    <AgentPerformanceDetail agent={currentAgent} policies={policies} clients={clients} />
-                </div>
+                <>
+                    <AgentPerformanceMetrics agent={currentAgent} clients={clients} policies={policies} />
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 mb-8 card-enter" style={{ animationDelay: '0.5s' }}>
+                        <AgentPerformanceDetail agent={currentAgent} policies={policies} clients={clients} />
+                    </div>
+                </>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
                 <div className="lg:col-span-3 bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.6s' }}>
-                    <h2 className="text-xl font-bold text-slate-700 mb-4">Monthly Premiums</h2>
+                    <h2 className="text-xl font.bold text-slate-700 mb-4">Monthly Premiums</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={salesData}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -130,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                     </ResponsiveContainer>
                 </div>
                 <div className="lg:col-span-2 bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.7s' }}>
-                    <h2 className="text-xl font-bold text-slate-700 mb-4">Policies by Type</h2>
+                    <h2 className="text-xl font.bold text-slate-700 mb-4">Policies by Type</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Pie data={pieData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${((+(percent || 0)) * 100).toFixed(0)}%`}>
@@ -145,7 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
             </div>
              <div className={`grid grid-cols-1 ${user.role === UserRole.ADMIN ? 'lg:grid-cols-2' : ''} gap-6`}>
                 <div className="bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.8s' }}>
-                    <h2 className="text-xl font-bold text-slate-700 mb-4">Upcoming Tasks</h2>
+                    <h2 className="text-xl font.bold text-slate-700 mb-4">Upcoming Tasks</h2>
                     <ul className="divide-y divide-slate-200">
                         {upcomingTasks.map(task => (
                             <li key={task.id} className="py-3 flex justify-between items-center">
@@ -160,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, clients, policies, tasks, a
                 </div>
                 {user.role === UserRole.ADMIN && (
                     <div className="bg-white p-6 rounded-lg border border-slate-200 card-enter" style={{ animationDelay: '0.9s' }}>
-                        <h2 className="text-xl font-bold text-slate-700 mb-4">Client Status Distribution</h2>
+                        <h2 className="text-xl font.bold text-slate-700 mb-4">Client Status Distribution</h2>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie 

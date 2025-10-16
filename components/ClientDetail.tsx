@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Client, Policy, Interaction, PolicyStatus, InteractionType, Agent, User, UserRole, ClientStatus } from '../types';
 import { summarizeNotes } from '../services/geminiService';
-import { AiSparklesIcon, PlusIcon, PencilIcon } from './icons';
+import { AiSparklesIcon, PlusIcon, PencilIcon, EllipsisVerticalIcon } from './icons';
 
 interface ClientDetailProps {
   client: Client;
@@ -13,6 +13,7 @@ interface ClientDetailProps {
   onUpdateStatus: (clientId: number, newStatus: ClientStatus) => void;
   onOpenAddPolicyModal: () => void;
   onOpenEditPolicyModal: (policy: Policy) => void;
+  onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void;
 }
 
 const getPolicyStatusColor = (status: PolicyStatus) => {
@@ -42,35 +43,66 @@ const DetailItem: React.FC<{ label: string; value?: string | number | null }> = 
   );
 };
 
-const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void }> = ({ policy, onEdit }) => (
-    <div className={`bg-white p-4 rounded-lg shadow-sm border border-l-4 ${getPolicyStatusColor(policy.status)} relative group`}>
-        <button onClick={() => onEdit(policy)} className="absolute top-2 right-2 p-1 rounded-full bg-slate-100 text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-primary-600 hover:text-white transition-opacity z-10" aria-label="Edit Policy">
-            <PencilIcon className="w-4 h-4" />
-        </button>
-        <div className="flex justify-between items-start">
-            <div>
-                <h3 className="font-bold text-primary-700">{policy.type} Insurance</h3>
-                <p className="text-sm text-slate-600 mt-1">Carrier: {policy.carrier || 'N/A'}</p>
-                <p className="text-sm text-slate-600 mt-1">Policy #: {policy.policyNumber}</p>
+const PolicyCard: React.FC<{ policy: Policy; onEdit: (policy: Policy) => void; onUpdatePolicy: (policyId: number, updates: Partial<Policy>) => void; }> = ({ policy, onEdit, onUpdatePolicy }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    const handleStatusChange = (status: PolicyStatus) => {
+        if (window.confirm(`Are you sure you want to mark this policy as ${status}?`)) {
+            onUpdatePolicy(policy.id, { status });
+        }
+        setIsMenuOpen(false);
+    }
+    
+    return (
+        <div className={`bg-white p-4 rounded-lg shadow-sm border border-l-4 ${getPolicyStatusColor(policy.status)} relative group`}>
+            <div className="absolute top-2 right-2">
+                <button 
+                    onClick={() => setIsMenuOpen(prev => !prev)} 
+                    onBlur={() => setTimeout(() => setIsMenuOpen(false), 150)}
+                    className="p-1.5 rounded-full bg-slate-100 text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-primary-600 hover:text-white focus:opacity-100 transition-opacity z-10" 
+                    aria-label="Policy Actions"
+                >
+                    <EllipsisVerticalIcon className="w-5 h-5" />
+                </button>
+                {isMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-20 modal-panel">
+                        <div className="py-1">
+                            <a href="#" onClick={(e) => { e.preventDefault(); onEdit(policy); setIsMenuOpen(false); }} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">Edit Policy</a>
+                            {policy.status === PolicyStatus.ACTIVE && (
+                                <>
+                                    <a href="#" onClick={(e) => { e.preventDefault(); handleStatusChange(PolicyStatus.CANCELLED); }} className="block px-4 py-2 text-sm text-rose-700 hover:bg-rose-50">Cancel Policy</a>
+                                    <a href="#" onClick={(e) => { e.preventDefault(); handleStatusChange(PolicyStatus.EXPIRED); }} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">Mark as Expired</a>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
-            <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{policy.status}</span>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h3 className="font-bold text-primary-700">{policy.type} Insurance</h3>
+                    <p className="text-sm text-slate-600 mt-1">Carrier: {policy.carrier || 'N/A'}</p>
+                    <p className="text-sm text-slate-600 mt-1">Policy #: {policy.policyNumber}</p>
+                </div>
+                <span className="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{policy.status}</span>
+            </div>
+            <div className="flex justify-between items-baseline mt-4">
+                <div>
+                    <p className="text-2xl font-semibold text-slate-800">${policy.monthlyPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-sm font-normal text-slate-500">/month</p>
+                </div>
+                <div>
+                    <p className="text-lg font-medium text-slate-600">${policy.annualPremium.toLocaleString()}</p>
+                    <p className="text-xs font-normal text-slate-500 text-right">/year</p>
+                </div>
+            </div>
+            <p className="text-sm text-slate-500 mt-2 border-t pt-2">Effective: {policy.startDate} - {policy.endDate}</p>
         </div>
-        <div className="flex justify-between items-baseline mt-4">
-            <div>
-                <p className="text-2xl font-semibold text-slate-800">${policy.monthlyPremium.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-sm font-normal text-slate-500">/month</p>
-            </div>
-            <div>
-                <p className="text-lg font-medium text-slate-600">${policy.annualPremium.toLocaleString()}</p>
-                <p className="text-xs font-normal text-slate-500 text-right">/year</p>
-            </div>
-        </div>
-        <p className="text-sm text-slate-500 mt-2 border-t pt-2">Effective: {policy.startDate} - {policy.endDate}</p>
-    </div>
-);
+    );
+};
 
 
-const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal }) => {
+const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interactions, assignedAgent, onBack, currentUser, onUpdateStatus, onOpenAddPolicyModal, onOpenEditPolicyModal, onUpdatePolicy }) => {
   const [activeTab, setActiveTab] = useState<'policies' | 'interactions' | 'notes'>('policies');
   const [notes, setNotes] = useState(interactions.filter(i => i.type === InteractionType.NOTE).map(i => i.summary).join('\n\n'));
   const [summary, setSummary] = useState('');
@@ -171,7 +203,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, policies, interacti
       <div>
         {activeTab === 'policies' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {policies.map(policy => <PolicyCard key={policy.id} policy={policy} onEdit={onOpenEditPolicyModal} />)}
+            {policies.map(policy => <PolicyCard key={policy.id} policy={policy} onEdit={onOpenEditPolicyModal} onUpdatePolicy={onUpdatePolicy} />)}
             <button onClick={onOpenAddPolicyModal} className="border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center p-4 text-slate-500 hover:bg-slate-50 hover:border-primary-500 hover:text-primary-600 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
                 <PlusIcon className="w-8 h-8 mb-2" />
                 <span className="font-semibold">Add New Policy</span>

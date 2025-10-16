@@ -14,6 +14,20 @@ export const login = async ({ email, password }: Record<string, string>) => {
         throw { status: 403, message: 'Please verify your email before logging in.', requiresVerification: true, user };
     }
     
+    // Check agent status for non-admin users
+    if (user.role !== UserRole.ADMIN) {
+        const agent = await db.agents.findById(user.id);
+        if (!agent) {
+             throw { status: 404, message: 'Associated agent profile not found.' };
+        }
+        if (agent.status === AgentStatus.PENDING) {
+             throw { status: 403, message: 'Your account is pending approval.', requiresApproval: true, user };
+        }
+        if (agent.status === AgentStatus.INACTIVE) {
+            throw { status: 403, message: 'Your account is inactive. Please contact an administrator.' };
+        }
+    }
+
     const token = auth.sign({ id: user.id, role: user.role });
     // Omit password from the response
     const { password: _, ...userResponse } = user;
@@ -24,7 +38,8 @@ export const login = async ({ email, password }: Record<string, string>) => {
 };
 
 export const register = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
-    if (await db.users.findByEmail(userData.email)) {
+    const lowerCaseEmail = userData.email.toLowerCase();
+    if (await db.users.findByEmail(lowerCaseEmail)) {
         throw { status: 409, message: 'An account with this email already exists.' };
     }
 
@@ -32,6 +47,7 @@ export const register = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) 
 
     const newUser = await db.users.create({
       ...userData,
+      email: lowerCaseEmail,
       title: userData.role === UserRole.AGENT ? 'Agent Applicant' : 'Sub-Admin Applicant',
       avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
       isVerified: false,
@@ -62,4 +78,17 @@ export const verifyEmail = async ({ userId, code }: { userId: number, code: stri
         return { success: true };
     }
     throw { status: 400, message: 'Invalid verification code.' };
+};
+
+export const getMe = async (currentUser: User) => {
+    const { password, ...userResponse } = currentUser;
+    let agentStatus: AgentStatus | null = null;
+    if (currentUser.role !== UserRole.ADMIN) {
+        const agent = await db.agents.findById(currentUser.id);
+        // Do not throw error here, as an admin might not have an agent profile
+        if (agent) {
+          agentStatus = agent.status;
+        }
+    }
+    return { user: userResponse, agentStatus };
 };

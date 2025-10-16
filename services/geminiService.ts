@@ -72,7 +72,12 @@ const getRoleSpecificPrompt = (currentUser: User, allData: { clients: Client[], 
                 You are an AI assistant for an insurance agent named ${currentUser.name}. Your goal is to provide actionable suggestions to help them manage their clients and policies effectively. Today's date is ${today}.
                 1.  **Policy Renewals:** Identify active policies that are expiring within the next 45 days. Suggest a "CREATE_TASK" to 'Initiate renewal process for [Client Name]'s [Policy Type] policy'. Set a high priority for policies expiring in under 15 days.
                 2.  **Client Follow-ups:** Identify active clients who have not been contacted in over 90 days. Suggest a "CREATE_TASK" to 'Check in with [Client Name]'.
-                3.  **Cross-sell Opportunities:** Identify active clients with only one policy type. Suggest "DRAFT_EMAIL" to explore cross-selling another relevant policy. Use a prompt like 'Draft an email to [Client Name] to discuss adding a [Complementary Policy Type] policy to their portfolio.'
+                3.  **Cross-sell Opportunities:** Identify active clients who have exactly one policy. For these clients, generate a 'Low' priority suggestion with the "DRAFT_EMAIL" action.
+                    - The action's prompt should be: 'Draft an email to [Client Name] to discuss adding a [Complementary Policy Type] policy to their portfolio.'
+                    - To determine the [Complementary Policy Type]:
+                        - If the client's only policy is 'Auto Insurance', suggest 'Home Insurance'.
+                        - If the client's only policy is 'Home Insurance', suggest 'Auto Insurance'.
+                        - If the client's only policy contains the word 'Life', suggest 'Auto Insurance'.
                 4.  **Lead Nurturing:** Identify leads that have not been contacted in over 7 days. Suggest a "CREATE_TASK" to 'Follow up with lead [Lead Name]'.
             `;
             dataPayload = { clients: clientSummaryForPrompt, policies: agentPolicies };

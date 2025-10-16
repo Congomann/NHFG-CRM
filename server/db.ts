@@ -20,7 +20,7 @@ const STORES = {
 
 let dbPromise: Promise<IDBDatabase>;
 
-const initDB = (): Promise<IDBDatabase> => {
+export const initDB = (): Promise<IDBDatabase> => {
     if (dbPromise) return dbPromise;
 
     dbPromise = new Promise((resolve, reject) => {
@@ -137,14 +137,10 @@ const remove = (storeName: string, id: number): Promise<boolean> => new Promise(
 export const db = {
   users: {
     find: () => getAll<User>(STORES.users),
-    findByEmail: (email: string): Promise<User | undefined> => new Promise(async (resolve, reject) => {
-        const db = await initDB();
-        const tx = db.transaction(STORES.users, 'readonly');
-        const index = tx.objectStore(STORES.users).index('email');
-        const request = index.get(email.toLowerCase());
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    }),
+    findByEmail: async (email: string): Promise<User | undefined> => {
+        const users = await getAll<User>(STORES.users);
+        return users.find(user => user.email.toLowerCase() === email.toLowerCase());
+    },
     findById: (id: number) => getById<User>(STORES.users, id),
     create: (data: Omit<User, 'id'>) => add<User>(STORES.users, data),
     update: async (id: number, data: Partial<User>) => {
@@ -197,6 +193,3 @@ export const db = {
   },
   deleteRecord: (resource: string, id: number): Promise<boolean> => remove(resource, id),
 };
-
-// Ensure DB is initialized on load
-initDB().then(() => console.log("Database initialized.")).catch(err => console.error("Database initialization failed:", err));

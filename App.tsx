@@ -22,17 +22,15 @@ import DemoModeSwitcher from './components/DemoModeSwitcher';
 import PublicLayout from './components/PublicLayout';
 import HomePage from './components/HomePage';
 import AIAssistantView from './components/AIAssistantView';
+import Login from './components/Login';
+import Register from './components/Register';
+import VerifyEmail from './components/VerifyEmail';
+import PendingApproval from './components/PendingApproval';
 
 import { useDatabase } from './hooks/useDatabase';
-import { Client, Policy, Interaction, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, CalendarNote, Testimonial } from './types';
+import { Client, Policy, Task, User, UserRole, Agent, ClientStatus, Message, AgentStatus, License, Notification, Testimonial } from './types';
 import { ToastProvider, useToast } from './contexts/ToastContext';
-import { MOCK_USERS } from './constants';
-import * as apiClient from './services/apiClient';
-
-const defaultUser = MOCK_USERS.find(u => u.role === UserRole.ADMIN)!;
-// This is the pre-generated token for the admin user (ID 1), as the login flow is disabled.
-const DEMO_TOKEN = 'eyJpZCI6MSwicm9sZSI6IkFkbWluIn0=.U1VQRVJfU0VDUkVUX0tFWV9GT1JfREVNTw==';
-apiClient.setToken(DEMO_TOKEN);
+import * as authService from './services/authService';
 
 const NotificationHandler: React.FC<{ notifications: Notification[]; currentUser: User | null }> = ({ notifications, currentUser }) => {
   const { addToast } = useToast();
@@ -55,14 +53,11 @@ const NotificationHandler: React.FC<{ notifications: Notification[]; currentUser
   return null; // This component doesn't render anything
 };
 
-
-const App: React.FC = () => {
-  const currentUser = defaultUser;
-  
-  const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers, refetchData } = useDatabase(currentUser);
+const AuthenticatedApp: React.FC<{ user: User, onLogout: () => void }> = ({ user, onLogout }) => {
+  const { isLoading: isDataLoading, users, agents, clients, policies, interactions, tasks, messages, licenses, notifications, calendarNotes, testimonials, handlers } = useDatabase(user);
 
   // UI state
-  const [currentView, setCurrentView] = useState(window.location.hash.replace(/^#\/?/, '') || 'home');
+  const [currentView, setCurrentView] = useState(window.location.hash.replace(/^#\/?/, '') || 'dashboard');
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState<Client | null>(null);
@@ -80,7 +75,7 @@ const App: React.FC = () => {
   const typingTimeoutRef = useRef<Record<number, number>>({});
 
   useEffect(() => {
-    const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'home';
+    const getViewFromHash = () => window.location.hash.replace(/^#\/?/, '') || 'dashboard';
 
     const syncViewFromHash = () => {
         const viewFromHash = getViewFromHash();
@@ -98,10 +93,10 @@ const App: React.FC = () => {
 
   const displayUser = useMemo(() => {
     if (impersonatedUserId === null || !users || users.length === 0) {
-      return currentUser;
+      return user;
     }
-    return users.find(u => u.id === impersonatedUserId) || currentUser;
-  }, [impersonatedUserId, currentUser, users]);
+    return users.find(u => u.id === impersonatedUserId) || user;
+  }, [impersonatedUserId, user, users]);
 
 
   const handleNavigation = (view: string) => {
@@ -121,13 +116,11 @@ const App: React.FC = () => {
 
     typingTimeoutRef.current[currentUserId] = window.setTimeout(() => {
         setTypingStatus(prev => ({ ...prev, [currentUserId]: false }));
-    }, 3000); // User is considered "stopped typing" after 3 seconds of inactivity
+    }, 3000);
   };
 
 
   const handleNotificationClick = (notification: Notification) => {
-    // This logic is now handled server-side and via state updates
-    // The main purpose is navigation
     handleNavigation(notification.link);
   };
 
@@ -139,11 +132,6 @@ const App: React.FC = () => {
       setClientListAgentFilter(agent);
       handleNavigation('clients');
     }
-  };
-
-  const highlightAgent = (agentId: number) => {
-    setHighlightedAgentId(agentId);
-    setTimeout(() => setHighlightedAgentId(null), 3000);
   };
   
   const handleOpenAddAgentModal = () => {
@@ -169,12 +157,6 @@ const App: React.FC = () => {
     setPolicyToEdit(null);
     setCurrentClientIdForPolicy(null);
   };
-
-  const handleSaveAgent = async (agentData: Agent) => {
-    // Logic moved to useDatabase hook
-    setIsAgentModalOpen(false);
-    setAgentToEdit(null);
-  };
   
   const handleUpdateMyProfile = async (updatedUser: User) => {
       await handlers.handleUpdateMyProfile(updatedUser);
@@ -190,12 +172,6 @@ const App: React.FC = () => {
     setLeadToEdit(lead);
     setIsLeadModalOpen(true);
   };
-
-  const handleSaveLead = async (leadData: Client) => {
-    // This now just needs to call the update/create handler from useDatabase
-    setIsLeadModalOpen(false);
-    setLeadToEdit(null);
-  };
   
   const isAgentProfileView = currentView.startsWith('agent/');
 
@@ -204,8 +180,7 @@ const App: React.FC = () => {
   }, [handlers]);
 
   const handleAddTestimonialFromProfile = useCallback(async (testimonialData: Omit<Testimonial, 'id' | 'status' | 'submissionDate'>) => {
-      // Logic for adding a testimonial is now handled in the backend, initiated by useDatabase hook
-      // Simply call the handler. The toast is now inside the hook.
+      // Logic is handled in the backend now.
   }, []);
 
   const handleSendBroadcast = async (message: string) => {
@@ -215,7 +190,9 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     const publicViews = ['home', 'about', 'services', 'contact', ''];
-    if (publicViews.includes(currentView)) {
+    const currentViewPath = currentView.split('/')[0];
+
+    if (publicViews.includes(currentViewPath)) {
         return (
             <PublicLayout onNavigate={handleNavigation}>
                 <HomePage onNavigate={handleNavigation} />
@@ -237,6 +214,7 @@ const App: React.FC = () => {
                     onUpdateStatus={handlers.handleUpdateClientStatus}
                     onOpenAddPolicyModal={() => handleOpenAddPolicyModal(client.id)}
                     onOpenEditPolicyModal={handleOpenEditPolicyModal}
+                    onUpdatePolicy={handlers.handleUpdatePolicy}
                     />;
       }
     }
@@ -262,7 +240,7 @@ const App: React.FC = () => {
             return <AgentProfile 
                 agent={agent} 
                 onAddLead={(leadData) => handleAddLeadFromProfile(leadData, agent.id)}
-                currentUser={currentUser}
+                currentUser={user}
                 onMessageAgent={handleMessageAgent}
                 onViewAgentClients={handleViewAgentClients}
                 onUpdateProfile={() => {}}
@@ -348,7 +326,7 @@ const App: React.FC = () => {
         break;
       case 'calendar':
         return <CalendarView
-            currentUser={currentUser}
+            currentUser={user}
             users={users}
             notes={calendarNotes}
             onSaveNote={handlers.handleSaveCalendarNote}
@@ -411,16 +389,7 @@ const App: React.FC = () => {
         break;
       case 'dashboard':
       default:
-        // If the default route is hit and it's not 'dashboard', it might be an old link.
-        // Redirect to homepage if it's not a known CRM view.
-        const knownCrmViews = ['dashboard', 'clients', 'tasks', 'agents', 'leads', 'calendar', 'commissions', 'licenses', 'testimonials', 'my-profile', 'ai-assistant'];
-        if (!knownCrmViews.some(v => currentView.startsWith(v))) {
-             return (
-                <PublicLayout onNavigate={handleNavigation}>
-                    <HomePage onNavigate={handleNavigation} />
-                </PublicLayout>
-            );
-        }
+        // Fallback to dashboard for unknown CRM views
         return <Dashboard 
                 user={displayUser}
                 clients={clients}
@@ -432,7 +401,6 @@ const App: React.FC = () => {
     }
   };
   
-  const AppContent = () => {
       if (isDataLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-background">
@@ -457,7 +425,7 @@ const App: React.FC = () => {
           ) : (
             <div className="flex h-full">
                 <Sidebar 
-                    currentUser={currentUser}
+                    currentUser={user}
                     currentView={currentView} 
                     onNavigate={handleNavigation}
                     onEditMyProfile={() => setIsMyProfileModalOpen(true)}
@@ -465,11 +433,12 @@ const App: React.FC = () => {
                     onNotificationClick={handleNotificationClick}
                     onClearAllNotifications={() => {}}
                     impersonatedRole={impersonatedUserId ? displayUser.role : null}
+                    onLogout={onLogout}
                 />
                 <main className={`flex-1 overflow-y-auto relative ml-64`}>
-                    {currentUser.role === UserRole.ADMIN && (
+                    {user.role === UserRole.ADMIN && (
                     <DemoModeSwitcher
-                        adminUser={currentUser}
+                        adminUser={user}
                         subAdminUser={subAdminUser}
                         agents={activeAgents}
                         impersonatedUserId={impersonatedUserId}
@@ -491,21 +460,21 @@ const App: React.FC = () => {
           <AddEditLeadModal
             isOpen={isLeadModalOpen}
             onClose={() => setIsLeadModalOpen(false)}
-            onSave={handleSaveLead}
+            onSave={handlers.handleUpdateClient as any}
             agents={agents}
             leadToEdit={leadToEdit}
           />
           <AddEditAgentModal
             isOpen={isAgentModalOpen}
             onClose={() => setIsAgentModalOpen(false)}
-            onSave={handleSaveAgent}
+            onSave={() => {}}
             agentToEdit={agentToEdit}
           />
           <EditMyProfileModal
             isOpen={isMyProfileModalOpen}
             onClose={() => setIsMyProfileModalOpen(false)}
             onSave={handleUpdateMyProfile}
-            currentUser={currentUser}
+            currentUser={user}
           />
           <AddEditPolicyModal
             isOpen={isPolicyModalOpen}
@@ -519,16 +488,138 @@ const App: React.FC = () => {
             onClose={() => setIsBroadcastModalOpen(false)}
             onSend={handleSendBroadcast}
           />
-          <NotificationHandler notifications={notifications} currentUser={currentUser} />
+          <NotificationHandler notifications={notifications} currentUser={user} />
         </div>
       );
-  }
+}
 
-  return (
-    <ToastProvider>
-        <AppContent />
-    </ToastProvider>
-  )
+type AuthState = 'initializing' | 'authenticated' | 'unauthenticated' | 'needsVerification' | 'pendingApproval';
+
+const App: React.FC = () => {
+    const [authState, setAuthState] = useState<AuthState>('initializing');
+    const [authView, setAuthView] = useState<'login' | 'register'>('login');
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [authError, setAuthError] = useState<string | null>(null);
+    const { addToast } = useToast();
+
+    const checkAuthStatus = useCallback(async () => {
+        const token = authService.getToken();
+        if (token) {
+            try {
+                const { user, agentStatus } = await authService.getMe();
+                if (user) {
+                    if (!user.isVerified && user.role !== UserRole.ADMIN) {
+                        setCurrentUser(user);
+                        setAuthState('needsVerification');
+                    } else if (agentStatus === AgentStatus.PENDING) {
+                        setCurrentUser(user);
+                        setAuthState('pendingApproval');
+                    } else if (agentStatus === AgentStatus.INACTIVE) {
+                        addToast('Account Inactive', 'Your account is inactive. Please contact an administrator.', 'error');
+                        authService.logout();
+                        setAuthState('unauthenticated');
+                    } else {
+                        setCurrentUser(user);
+                        setAuthState('authenticated');
+                    }
+                } else {
+                    authService.logout();
+                    setAuthState('unauthenticated');
+                }
+            } catch (e) {
+                authService.logout();
+                setAuthState('unauthenticated');
+            }
+        } else {
+            setAuthState('unauthenticated');
+        }
+    }, [addToast]);
+    
+    useEffect(() => {
+        checkAuthStatus();
+    }, [checkAuthStatus]);
+    
+    const handleLogin = async (email: string, password: string) => {
+        setAuthError(null);
+        try {
+            await authService.login(email, password);
+            addToast('Login Successful', 'Welcome back!', 'success');
+            await checkAuthStatus();
+            return true;
+        } catch (err: any) {
+            setAuthError(err.message || 'Login failed.');
+            if (err.requiresVerification) {
+                setCurrentUser(err.user);
+                setAuthState('needsVerification');
+            } else if (err.requiresApproval) {
+                setCurrentUser(err.user);
+                setAuthState('pendingApproval');
+            }
+            return false;
+        }
+    };
+
+    const handleRegister = async (userData: Omit<User, 'id' | 'title' | 'avatar'>) => {
+        setAuthError(null);
+        try {
+            const { user } = await authService.register(userData);
+            setCurrentUser(user);
+            setAuthState('needsVerification');
+            setAuthView('login'); // Switch back to login view after registration
+            addToast('Registration Successful', 'Please check your "email" for a verification code.', 'success');
+        } catch (err: any) {
+            addToast('Registration Failed', err.message || 'Could not create account.', 'error');
+        }
+    };
+    
+    const handleVerify = async (userId: number, code: string) => {
+        try {
+            await authService.verifyEmail(userId, code);
+            addToast('Verification Successful', 'You can now log in to your account.', 'success');
+            setAuthState('unauthenticated');
+            setCurrentUser(null);
+        } catch (err: any) {
+            addToast('Verification Failed', err.message || 'Could not verify email.', 'error');
+        }
+    };
+
+    const handleLogout = () => {
+        authService.logout();
+        setCurrentUser(null);
+        setAuthState('unauthenticated');
+        setAuthError(null);
+        window.location.hash = '/home';
+    };
+
+    if (authState === 'initializing') {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-background">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mb-4"></div>
+                <div className="text-xl font-semibold text-slate-600">Loading Session...</div>
+            </div>
+        );
+    }
+
+    if (authState === 'authenticated' && currentUser) {
+        return <AuthenticatedApp user={currentUser} onLogout={handleLogout} />;
+    }
+
+    if (authState === 'needsVerification' && currentUser) {
+        return <VerifyEmail user={currentUser} onVerify={handleVerify} onNavigateToLogin={handleLogout} />;
+    }
+
+    if (authState === 'pendingApproval') {
+        return <PendingApproval onLogout={handleLogout} />;
+    }
+
+    if (authState === 'unauthenticated') {
+        if (authView === 'login') {
+            return <Login onLogin={handleLogin} error={authError} onNavigateToRegister={() => { setAuthView('register'); setAuthError(null); }} />;
+        }
+        return <Register onRegister={handleRegister} onNavigateToLogin={() => { setAuthView('login'); setAuthError(null); }} />;
+    }
+    
+    return null; // Should not be reached
 };
 
 const MainApp: React.FC = () => (

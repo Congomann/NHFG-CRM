@@ -6,7 +6,8 @@ interface AddEditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Omit<Task, 'id' | 'completed'> & { id?: number }) => void;
-  taskToEdit?: Task | null;
+  // FIX: Allow a partial Task object for pre-filling the modal when creating a new task.
+  taskToEdit?: Partial<Task> | null;
   clients: Client[];
 }
 
@@ -17,8 +18,9 @@ const AddEditTaskModal: React.FC<AddEditTaskModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (taskToEdit) {
-      setTitle(taskToEdit.title);
-      setDueDate(taskToEdit.dueDate);
+      // FIX: Add fallbacks to handle the partial task object.
+      setTitle(taskToEdit.title || '');
+      setDueDate(taskToEdit.dueDate || '');
       setClientId(taskToEdit.clientId);
     } else {
       // Reset form for new task
@@ -47,7 +49,7 @@ const AddEditTaskModal: React.FC<AddEditTaskModalProps> = ({ isOpen, onClose, on
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 modal-backdrop">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md m-4 modal-panel">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">{taskToEdit ? 'Edit Task' : 'Add New Task'}</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{taskToEdit?.id ? 'Edit Task' : 'Add New Task'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <CloseIcon />
           </button>
@@ -73,7 +75,7 @@ const AddEditTaskModal: React.FC<AddEditTaskModalProps> = ({ isOpen, onClose, on
           <div className="flex justify-end items-center gap-3">
             <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-white rounded-md shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50">Cancel</button>
             <button type="submit" className="px-5 py-2.5 text-sm font-semibold text-white bg-primary-600 rounded-md shadow-sm hover:bg-primary-500 flex items-center">
-              <PlusIcon className="w-5 h-5 mr-2" /> {taskToEdit ? 'Save Changes' : 'Add Task'}
+              <PlusIcon className="w-5 h-5 mr-2" /> {taskToEdit?.id ? 'Save Changes' : 'Add Task'}
             </button>
           </div>
         </form>

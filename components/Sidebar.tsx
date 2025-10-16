@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon } from './icons';
+import { DashboardIcon, ClientsIcon, CrmLogoIcon, TasksIcon, ChevronDownIcon, MessageIcon, UserCircleIcon, DollarSignIcon, PencilIcon, ShieldIcon, BellIcon, EyeIcon, CalendarDaysIcon, ChatBubbleLeftRightIcon, AiSparklesIcon, UsersIcon, ShieldCheckIcon, BroadcastIcon, LogoutIcon } from './icons';
 import { User, UserRole, Notification, NotificationType } from '../types';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ interface SidebarProps {
   onNotificationClick: (notification: Notification) => void;
   onClearAllNotifications: (userId: number) => void;
   impersonatedRole: UserRole | null;
+  onLogout: () => void;
 }
 
 const navConfig = {
@@ -46,7 +47,7 @@ const navConfig = {
 };
 
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, notifications, onNotificationClick, onClearAllNotifications, impersonatedRole }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser, onEditMyProfile, notifications, onNotificationClick, onClearAllNotifications, impersonatedRole, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const displayRole = impersonatedRole || currentUser.role;
@@ -97,6 +98,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
         return <ShieldCheckIcon className={`${iconClass} text-violet-500`} />;
       case NotificationType.BROADCAST:
         return <BroadcastIcon className={`${iconClass} text-rose-500`} />;
+      case NotificationType.POLICY_RENEWAL:
+        return <ShieldCheckIcon className={`${iconClass} text-blue-500`} />;
       default:
         return <BellIcon className={`${iconClass} text-slate-500`} />;
     }
@@ -166,6 +169,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, currentUser,
                 <a href="#" onClick={(e) => { e.preventDefault(); onEditMyProfile(); setIsDropdownOpen(false); }} className="flex items-center px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
                     <PencilIcon className="w-4 h-4 mr-3 text-slate-400" />
                     <span>Edit My Profile</span>
+                </a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); setIsDropdownOpen(false); }} className="flex items-center px-3 py-2 text-sm text-rose-400 hover:bg-slate-700">
+                    <LogoutIcon className="w-4 h-4 mr-3" />
+                    <span>Logout</span>
                 </a>
             </div>
         )}

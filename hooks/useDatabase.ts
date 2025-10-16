@@ -145,11 +145,10 @@ export const useDatabase = (currentUser: User | null) => {
             () => apiClient.del(`/api/testimonials/${id}`),
             'Testimonial Deleted', 'The testimonial has been removed.'
         ),
-        handleSendMessage: (receiverId: number, text: string) => {
+        handleSendMessage: async (receiverId: number, text: string) => {
             if (!currentUser) return;
 
-            // Optimistic update: add message to state immediately
-            const tempId = -Date.now(); // Temporary unique ID
+            const tempId = -Date.now();
             const tempMessage: Message = {
                 id: tempId,
                 senderId: currentUser.id,
@@ -158,24 +157,40 @@ export const useDatabase = (currentUser: User | null) => {
                 timestamp: new Date().toISOString(),
                 status: 'active',
                 source: 'internal',
-                isRead: true, // Read by the sender
+                isRead: true, // Read by sender
             };
 
+            // Optimistic update
             setData(prevData => ({
                 ...prevData,
                 messages: [...prevData.messages, tempMessage],
             }));
 
-            // Send to server in the background, and handle potential errors
-            apiClient.sendMessage(receiverId, text)
-                .catch(error => {
-                    addToast('Error', 'Failed to send message.', 'error');
-                    // On error, revert the optimistic update by removing the temporary message
-                    setData(prevData => ({
+            try {
+                // The API call returns the message with its real ID from the DB
+                const savedMessage = await apiClient.sendMessage(receiverId, text);
+                
+                // Replace the temporary message with the saved one robustly
+                setData(prevData => {
+                    // Filter out the temp message by ID, then add the real one from the server.
+                    const finalMessages = prevData.messages.filter(m => m.id !== tempId);
+                    finalMessages.push(savedMessage);
+                    // Re-sort to ensure chronological order is maintained, which is crucial for the UI.
+                    finalMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+                    return {
                         ...prevData,
-                        messages: prevData.messages.filter(m => m.id !== tempId)
-                    }));
+                        messages: finalMessages,
+                    };
                 });
+            } catch (error: any) {
+                addToast('Error', error.message || 'Failed to send message.', 'error');
+                // On error, revert the optimistic update by removing the temporary message
+                setData(prevData => ({
+                    ...prevData,
+                    messages: prevData.messages.filter(m => m.id !== tempId),
+                }));
+            }
         },
         handleEditMessage: (messageId: number, text: string) => handleApiCall(
             () => apiClient.editMessage(messageId, text),

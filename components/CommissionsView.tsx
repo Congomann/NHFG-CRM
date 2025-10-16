@@ -42,10 +42,16 @@ interface AgentCommissionsProps {
 
 // Agent-specific view
 const AgentCommissions: React.FC<AgentCommissionsProps> = ({ policies, clients, agent, onUpdatePolicy }) => {
+    // 1. Identify all clients assigned to the current agent.
     const agentClientIds = clients.filter(c => c.agentId === agent.id).map(c => c.id);
+    
+    // 2. Filter policies to include only those that belong to the agent's clients AND are currently 'Active'.
     const agentPolicies = policies.filter(p => agentClientIds.includes(p.clientId) && p.status === 'Active');
 
+    // 3. Calculate the total annual premium (AP) from these active policies.
     const totalPremium = agentPolicies.reduce((sum, p) => sum + p.annualPremium, 0);
+    
+    // 4. Calculate the total commission earned by multiplying the total AP by the agent's commission rate.
     const totalCommission = totalPremium * agent.commissionRate;
 
     const commissionByPolicyType = agentPolicies.reduce((acc, policy) => {
@@ -145,11 +151,20 @@ const AgentCommissions: React.FC<AgentCommissionsProps> = ({ policies, clients, 
 
 // Admin-specific view
 const AdminCommissions: React.FC<Omit<CommissionsViewProps, 'currentUser' | 'onUpdatePolicy'>> = ({ agents, policies, clients }) => {
+    // For each agent, calculate their total premium sold and the override commission earned by the agency.
     const agentData = agents.map(agent => {
+        // Find clients for the current agent being mapped.
         const agentClientIds = clients.filter(c => c.agentId === agent.id).map(c => c.id);
+        
+        // Filter for active policies belonging to those clients.
         const agentPolicies = policies.filter(p => agentClientIds.includes(p.clientId) && p.status === 'Active');
+        
+        // Sum the annual premium of all active policies for the agent.
         const totalPremium = agentPolicies.reduce((sum, p) => sum + p.annualPremium, 0);
+        
+        // The override is the portion of the premium not paid to the agent.
         const overrideEarned = totalPremium * (1 - agent.commissionRate);
+        
         return {
             ...agent,
             totalPremium,
@@ -157,6 +172,7 @@ const AdminCommissions: React.FC<Omit<CommissionsViewProps, 'currentUser' | 'onU
         };
     });
 
+    // Sum the totals for the entire agency.
     const totalAgencyPremium = agentData.reduce((sum, a) => sum + a.totalPremium, 0);
     const totalOverride = agentData.reduce((sum, a) => sum + a.overrideEarned, 0);
 

@@ -9,7 +9,7 @@ interface AddEditAgentModalProps {
   agentToEdit: Agent | null;
 }
 
-const DEFAULT_NEW_AGENT_FORM_DATA: Omit<Agent, 'id' | 'slug' | 'leads' | 'clientCount' | 'conversionRate' | 'testimonials' | 'socials'> = {
+const DEFAULT_NEW_AGENT_FORM_DATA: Omit<Agent, 'id' | 'slug' | 'leads' | 'clientCount' | 'conversionRate' | 'socials'> = {
     name: '',
     email: '',
     commissionRate: 0.75,
@@ -79,7 +79,6 @@ const AddEditAgentModal: React.FC<AddEditAgentModalProps> = ({ isOpen, onClose, 
       leads: agentToEdit?.leads || 0,
       clientCount: agentToEdit?.clientCount || 0,
       conversionRate: agentToEdit?.conversionRate || 0,
-      testimonials: agentToEdit?.testimonials || [],
       socials: agentToEdit?.socials || {},
     };
     onSave(finalAgentData);

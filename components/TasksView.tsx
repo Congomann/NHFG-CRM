@@ -14,6 +14,15 @@ interface TasksViewProps {
 
 type FilterStatus = 'all' | 'active' | 'completed';
 
+const FilterButton: React.FC<{buttonFilter: FilterStatus, label: string, activeFilter: FilterStatus, setFilter: (filter: FilterStatus) => void}> = ({ buttonFilter, label, activeFilter, setFilter }) => (
+    <button
+      onClick={() => setFilter(buttonFilter)}
+      className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm button-press ${activeFilter === buttonFilter ? 'bg-primary-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'}`}
+    >
+      {label}
+    </button>
+);
+
 const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onToggleTask, onDeleteTask, onSelectClient }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
@@ -62,15 +71,6 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
     
     return 'text-slate-500';
   };
-  
-  const FilterButton: React.FC<{buttonFilter: FilterStatus, label: string}> = ({ buttonFilter, label }) => (
-    <button
-      onClick={() => setFilter(buttonFilter)}
-      className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm button-press ${filter === buttonFilter ? 'bg-primary-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'}`}
-    >
-      {label}
-    </button>
-  );
 
   return (
     <div className="p-8">
@@ -83,9 +83,9 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, clients, onSaveTask, onTog
       </div>
       
       <div className="mb-6 flex space-x-2">
-        <FilterButton buttonFilter="active" label="Active" />
-        <FilterButton buttonFilter="completed" label="Completed" />
-        <FilterButton buttonFilter="all" label="All" />
+        <FilterButton buttonFilter="active" label="Active" activeFilter={filter} setFilter={setFilter} />
+        <FilterButton buttonFilter="completed" label="Completed" activeFilter={filter} setFilter={setFilter} />
+        <FilterButton buttonFilter="all" label="All" activeFilter={filter} setFilter={setFilter} />
       </div>
 
       <div className="bg-white rounded-lg border border-slate-200">
