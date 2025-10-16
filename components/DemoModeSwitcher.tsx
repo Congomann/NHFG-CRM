@@ -17,19 +17,20 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
     return impersonatedUserId === userId;
   };
 
-  const currentAgentName = agents.find(a => a.id === impersonatedUserId)?.name.split(' ')[0] || 'Agents';
+  const impersonatedAgent = agents.find(a => a.id === impersonatedUserId);
+  const agentButtonText = impersonatedAgent ? impersonatedAgent.name.split(' ')[0] : 'Agents';
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-lg">
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-2 flex items-center space-x-2 shadow-2xl border border-white/10">
-            <div className="flex items-center text-white font-bold px-3">
+            <div className="flex items-center text-white font-bold px-3 shrink-0">
                 <EyeIcon className="w-5 h-5 mr-2 text-primary-400" />
-                <span className="hidden sm:inline">Demo Portal View:</span>
+                <span className="hidden sm:inline">Demo View:</span>
             </div>
             
             <button
               onClick={() => onSwitchUser(null)}
-              className={`flex items-center px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+              className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
                 isActive(null)
                   ? 'bg-white text-primary-600 shadow-md'
                   : 'text-white/70 hover:bg-white/20 hover:text-white'
@@ -42,30 +43,30 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
             {subAdminUser && (
               <button
                 onClick={() => onSwitchUser(subAdminUser.id)}
-                className={`flex items-center px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+                className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
                   isActive(subAdminUser.id)
                     ? 'bg-white text-primary-600 shadow-md'
                     : 'text-white/70 hover:bg-white/20 hover:text-white'
                 }`}
               >
                 <UsersIcon className="w-5 h-5 mr-2" />
-                {subAdminUser.role}
+                Sub-Admin
               </button>
             )}
 
-            <div className="relative">
+            <div className="relative w-full">
               <button
                 onMouseEnter={() => setIsAgentDropdownOpen(true)}
                 onMouseLeave={() => setIsAgentDropdownOpen(false)}
-                className={`flex items-center px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
-                  agents.some(a => a.id === impersonatedUserId)
+                className={`flex items-center px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 w-full justify-center ${
+                  impersonatedAgent
                     ? 'bg-white text-primary-600 shadow-md'
                     : 'text-white/70 hover:bg-white/20 hover:text-white'
                 }`}
               >
                 <UsersIcon className="w-5 h-5 mr-2" />
-                {currentAgentName}
-                <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isAgentDropdownOpen ? 'rotate-180' : ''}`} />
+                <span className="truncate">{agentButtonText}</span>
+                <ChevronDownIcon className={`w-4 h-4 ml-1 flex-shrink-0 transition-transform ${isAgentDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {isAgentDropdownOpen && (
                 <div 
@@ -73,7 +74,7 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
                   onMouseLeave={() => setIsAgentDropdownOpen(false)}
                   className="absolute top-full mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10 py-1 max-h-60 overflow-y-auto"
                 >
-                  {agents.map(agent => (
+                  {agents.length > 0 ? agents.map(agent => (
                     <a
                       key={agent.id}
                       href="#"
@@ -86,7 +87,9 @@ const DemoModeSwitcher: React.FC<DemoModeSwitcherProps> = ({ adminUser, subAdmin
                     >
                       {agent.name}
                     </a>
-                  ))}
+                  )) : (
+                     <p className="px-4 py-2 text-sm text-slate-500">No active agents found.</p>
+                  )}
                 </div>
               )}
             </div>
